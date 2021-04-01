@@ -1,0 +1,7 @@
+{
+  "name": "odbApp",
+  "integrations": {
+    "cordova": {}
+  },
+  "type": "angular"
+}
