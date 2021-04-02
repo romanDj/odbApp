@@ -22,6 +22,7 @@ import {IonicStorageModule} from '@ionic/storage';
 
 import {AppRoutingModule} from './app-routing.module';
 import {AppComponent} from './app.component';
+import {BackgroundMode} from '@ionic-native/background-mode/ngx';
 
 
 @NgModule({
@@ -38,7 +39,8 @@ import {AppComponent} from './app.component';
     HTTP,
     BatteryStatus,
     BackgroundGeolocation,
-    BluetoothSerial
+    BluetoothSerial,
+    BackgroundMode
   ],
   bootstrap: [AppComponent],
 })
