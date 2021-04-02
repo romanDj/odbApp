@@ -19,6 +19,7 @@
     <preference name="SplashScreen" value="screen" />
     <preference name="SplashScreenDelay" value="3000" />
     <platform name="android">
+        <resource-file src="resources/icon.png" target="app/src/main/res/mipmap/icon.png" />
         <edit-config file="app/src/main/AndroidManifest.xml" mode="merge" target="/manifest/application" xmlns:android="http://schemas.android.com/apk/res/android">
             <application android:networkSecurityConfig="@xml/network_security_config" />
         </edit-config>
@@ -101,8 +102,8 @@
     <plugin name="cordova-plugin-background-geolocation" spec="@mauron85/cordova-plugin-background-geolocation@~3.1.0">
         <variable name="GOOGLE_PLAY_SERVICES_VERSION" value="11+" />
         <variable name="ANDROID_SUPPORT_LIBRARY_VERSION" value="26+" />
-        <variable name="ICON" value="@mipmap/ic_launcher" />
-        <variable name="SMALL_ICON" value="@mipmap/ic_launcher" />
+        <variable name="ICON" value="@mipmap/icon" />
+        <variable name="SMALL_ICON" value="@mipmap/icon" />
         <variable name="ALWAYS_USAGE_DESCRIPTION" value="App requires background tracking " />
         <variable name="MOTION_USAGE_DESCRIPTION" value="App requires motion detection" />
     </plugin>
