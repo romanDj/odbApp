@@ -7,6 +7,10 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
+  <div>Статус сбора данных: {{statusBackgroundTask}}</div>
+  <ion-button (click)="enableTask()"  color="primary">Включить</ion-button>
+  <ion-button (click)="disableTask()" color="danger">Выключить</ion-button>
+
   <ion-header collapse="condense">
     <ion-toolbar>
       <ion-title size="large">Tab 11</ion-title>

@@ -73,13 +73,26 @@ export class AppComponent implements OnInit, OnDestroy {
         hidden: false,
         bigText: false
       });
+
+      console.log('-- status background mode: ' + this.backgroundMode.isActive());
+
+      this.backgroundMode.on('enable').subscribe(() => {
+        console.log('-- background mode enabled');
+        this.startWatchData();
+      });
+
+      this.backgroundMode.on('disable').subscribe(() => {
+        console.log('-- background mode disabled');
+        this.stopWatchData();
+      });
+
       if (this.mainWatcher == null) {
-        this.backgroundMode.on('activate').subscribe(() => this.startWatchData());
+        // this.backgroundMode.on('activate').subscribe(() => this.startWatchData());
       }
       // this.backgroundMode.on('deactivate').subscribe(() => this.backgroundTask());
       this.backgroundMode.enable();
-      this.backgroundMode.moveToBackground();
-      this.enableGPSTracking();
+      // this.backgroundMode.moveToBackground();
+      // this.enableGPSTracking();
     });
   }
 
@@ -94,17 +107,20 @@ export class AppComponent implements OnInit, OnDestroy {
     const num: number = Math.floor(Math.random() * (100 - 1)) + 1;
     const ff = () => this.backgroundTask(num);
     // tslint:disable-next-line:only-arrow-functions
-    this.mainWatcher = setInterval(function() {
+    console.log('--start background Task--');
+    this.mainWatcher = setInterval(function () {
       ff();
     }, 5000);
   }
 
   stopWatchData() {
+    console.log('--stop background Task--');
     clearInterval(this.mainWatcher);
   }
 
   backgroundTask(num: number) {
-    console.log('task run watch ' + num);
+    const today: Date = new Date();
+    console.log('task run watch ' + num + ' | ' + `${today.getHours()}:${today.getMinutes()}:${today.getSeconds()}`);
     // if (this.backgroundMode.isActive()) {
     //   console.log('run background task');
     // } else {
