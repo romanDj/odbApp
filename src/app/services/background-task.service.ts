@@ -33,11 +33,12 @@ export class BackgroundTaskService {
   lifecycle;
 
   constructor(public backgroundMode: BackgroundMode, public backgroundGeolocation: BackgroundGeolocation) {
-    this.subscription = new Subscription();
-    this.lifecycle = interval(5000);
   }
 
   init(): void {
+    this.subscription = new Subscription();
+    this.lifecycle = interval(5000);
+
     this.backgroundMode.setDefaults({
       title: 'odbApp',
       text: 'Данные считываются с odb в реальном времени',
@@ -51,6 +52,7 @@ export class BackgroundTaskService {
 
     this.backgroundMode.on('enable').subscribe(() => {
       console.log('-- background mode enabled');
+      this.backgroundMode.disableWebViewOptimizations();
       this.start();
     });
 
@@ -74,6 +76,9 @@ export class BackgroundTaskService {
   }
 
   start(): void {
+    console.log('start init');
+    this.subscription = new Subscription();
+    this.lifecycle = interval(5000);
     const subscription = this.lifecycle.subscribe((): Promise<any> => this.task());
     this.subscription.add(subscription);
   }

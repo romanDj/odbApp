@@ -6,12 +6,37 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Tab 25</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content [fullscreen]="true" class="ion-padding">
+  <ion-grid>
+    <ion-row>
+      <ion-col>
+        <ion-icon name="bluetooth" style="color:#5c6bc0" class="ion-iconXL"></ion-icon>
+        <br>
+        <ion-label> {{bluetoothService.connstatus}} </ion-label>
+        <ion-label></ion-label>
 
-  <app-explore-container name="Tab 25 page"></app-explore-container>
+        <ion-select
+          *ngIf="bluetoothService.pairedList && bluetoothService.pairedList.length > 0; else pairedListEmpty"
+          [interfaceOptions]="alertOptions" interface="alert"
+          [(ngModel)]="bluetoothService.pairedDeviceID"
+          (ionChange)="bluetoothService.selectBtDevice($event)"
+          (ionFocus)="bluetoothService.init()"
+          [selectedText]="configOdbService.globalconfig.bluetoothDeviceToUse.devicename.substring(0,16)"
+          placeholder="Выберите устройство"
+          cancelText="Отмена">
+          <ion-select-option *ngFor="let i of bluetoothService.pairedList;let j=index"
+                             value="{{j}}" selected="{{i.isSelected}}">
+            <span>{{i.name}}</span>
+          </ion-select-option>
+        </ion-select>
+        <ng-template #pairedListEmpty>
+          <p>Нет видимых устройств</p>
+        </ng-template>
+      </ion-col>
+
+
+    </ion-row>
+    <p></p>
+
+  </ion-grid>
 </ion-content>

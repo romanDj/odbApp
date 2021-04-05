@@ -110,13 +110,13 @@
       },
       "cordova-plugin-background-mode": {},
       "cordova-plugin-battery-status": {},
-      "cordova-plugin-bluetooth-serial": {},
       "cordova-plugin-brightness": {},
       "cordova-plugin-file": {},
       "cordova-plugin-advanced-http": {},
       "cordova-plugin-insomnia": {},
       "cordova-plugin-network-information": {},
-      "cordova-sqlite-storage": {}
+      "cordova-sqlite-storage": {},
+      "cordova-plugin-bluetooth-serial": {}
     },
     "platforms": [
       "android"

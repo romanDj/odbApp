@@ -1,6 +1,10 @@
 import {Component} from '@angular/core';
 import {File} from '@ionic-native/file/ngx';
 import {ConfigOdbService} from '../services/config-odb.service';
+import {obdinfo} from '../utils/obdInfo.js';
+import {AlertController} from '@ionic/angular';
+import {BluetoothSerial} from '@ionic-native/bluetooth-serial/ngx';
+import {BluetoothService} from '../services/bluetooth.service';
 
 
 @Component({
@@ -10,17 +14,22 @@ import {ConfigOdbService} from '../services/config-odb.service';
 })
 export class Tab2Page {
 
-  constructor(private file: File, public configOdbService: ConfigOdbService) {
+  constructor(
+    private file: File,
+    public configOdbService: ConfigOdbService,
+    private alertCtrl: AlertController,
+    private bluetoothSerial: BluetoothSerial,
+    private bluetoothService: BluetoothService) {
     this.obdmetrics = [];
-    this.checkBluetoothEnabled();
   }
 
-  pairedList: PairedList[];
+  alertOptions: any = {
+    header: 'Список устройств',
+    translucent: true
+  };
+
   targetList = [];
-  listToggle = false;
-  pairedDeviceID = 0;
   dataSend = '';
-  connstatus = '';
   writeDelay = 50;
   btReceivedData = '';
   btLastCheckedReceivedData = '';
@@ -48,11 +57,6 @@ export class Tab2Page {
 
   compareWithFn(o1, o2) {
     return o1 && o2 ? o1.name === o2.name : o1 === o2;
-  }
-
-
-  checkBluetoothEnabled(): void {
-
   }
 
   configureMetricsList(): void {

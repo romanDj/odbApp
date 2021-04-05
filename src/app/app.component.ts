@@ -28,6 +28,7 @@ import {BackgroundMode} from '@ionic-native/background-mode/ngx';
 
 import {BackgroundTaskService} from './services/background-task.service';
 import {ConfigOdbService} from './services/config-odb.service';
+import {BluetoothService} from './services/bluetooth.service';
 
 const gpsConfig: BackgroundGeolocationConfig = {
   desiredAccuracy: 10,
@@ -60,7 +61,8 @@ export class AppComponent implements OnInit, OnDestroy {
     private network: Network,
     private http: HTTP,
     public backgroundTaskService: BackgroundTaskService,
-    public configOdbService: ConfigOdbService
+    public configOdbService: ConfigOdbService,
+    private bluetoothService: BluetoothService
   ) {
     this.initializeApp();
   }
@@ -78,6 +80,7 @@ export class AppComponent implements OnInit, OnDestroy {
       // this.statusBar.styleDefault();
       this.splashScreen.hide();
       this.configOdbService.init();
+      this.bluetoothService.init();
       this.backgroundTaskService.init();
       // this.backgroundMode.on('activate').subscribe(() => this.startWatchData());
       // this.backgroundMode.on('deactivate').subscribe(() => this.backgroundTask());

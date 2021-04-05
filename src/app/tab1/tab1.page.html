@@ -6,7 +6,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
+<ion-content [fullscreen]="true" class="ion-padding">
   <div>Статус сбора данных: {{statusBackgroundTask}}</div>
   <ion-button (click)="enableTask()"  color="primary">Включить</ion-button>
   <ion-button (click)="disableTask()" color="danger">Выключить</ion-button>
