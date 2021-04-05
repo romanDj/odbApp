@@ -1,5 +1,5 @@
 import {Component, OnDestroy, OnInit} from '@angular/core';
-import {BackgroundMode} from '@ionic-native/background-mode/ngx';
+import {BackgroundTaskService} from '../services/background-task.service';
 
 @Component({
   selector: 'app-tab1',
@@ -10,21 +10,21 @@ export class Tab1Page implements OnInit, OnDestroy {
 
   statusBackgroundTask = null;
 
-  constructor(private backgroundMode: BackgroundMode) {}
+  constructor(public backgroundTaskService: BackgroundTaskService) {}
 
   ngOnInit(){
-    this.statusBackgroundTask = this.backgroundMode.isActive();
+    this.statusBackgroundTask = this.backgroundTaskService.id;
   }
 
   ngOnDestroy() {
   }
 
   enableTask(){
-    this.backgroundMode.enable();
+    this.backgroundTaskService.enable();
   }
 
   disableTask(){
-    this.backgroundMode.disable();
+    this.backgroundTaskService.disable();
   }
 
 }

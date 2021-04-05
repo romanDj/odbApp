@@ -17,12 +17,13 @@ import {
 } from '@ionic-native/background-geolocation/ngx';
 import {File} from '@ionic-native/file/ngx';
 
-import {IonicModule, IonicRouteStrategy, IonRouterOutlet} from '@ionic/angular';
+import {IonicModule, IonicRouteStrategy, IonRouterOutlet, Platform} from '@ionic/angular';
 import {IonicStorageModule} from '@ionic/storage';
 
 import {AppRoutingModule} from './app-routing.module';
 import {AppComponent} from './app.component';
 import {BackgroundMode} from '@ionic-native/background-mode/ngx';
+import {BackgroundTaskService} from './services/background-task.service';
 
 
 @NgModule({
@@ -30,6 +31,7 @@ import {BackgroundMode} from '@ionic-native/background-mode/ngx';
   entryComponents: [],
   imports: [BrowserModule, IonicModule.forRoot(), AppRoutingModule, IonicStorageModule.forRoot()],
   providers: [
+    Platform,
     StatusBar,
     SplashScreen,
     {provide: RouteReuseStrategy, useClass: IonicRouteStrategy},

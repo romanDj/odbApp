@@ -26,6 +26,8 @@ import {HTTP} from '@ionic-native/http/ngx';
 import {BluetoothSerial} from '@ionic-native/bluetooth-serial/ngx';
 import {BackgroundMode} from '@ionic-native/background-mode/ngx';
 
+import {BackgroundTaskService} from './services/background-task.service';
+
 const gpsConfig: BackgroundGeolocationConfig = {
   desiredAccuracy: 10,
   stationaryRadius: 20,
@@ -42,7 +44,6 @@ const gpsConfig: BackgroundGeolocationConfig = {
   styleUrls: ['app.component.scss'],
 })
 export class AppComponent implements OnInit, OnDestroy {
-  mainWatcher = null;
 
   constructor(
     private platform: Platform,
@@ -57,75 +58,28 @@ export class AppComponent implements OnInit, OnDestroy {
     private sqlite: SQLite,
     private network: Network,
     private http: HTTP,
-    private backgroundMode: BackgroundMode) {
+    public backgroundTaskService: BackgroundTaskService
+  ) {
     this.initializeApp();
   }
 
-  initializeApp() {
-    this.platform.ready().then(() => {
-      // this.statusBar.styleDefault();
-      this.splashScreen.hide();
-      this.backgroundMode.setDefaults({
-        title: 'odbApp',
-        text: 'Данные считываются с odb в реальном времени',
-        // color: 'F14F4D',
-        resume: false,
-        hidden: false,
-        bigText: false
-      });
-
-      console.log('-- status background mode: ' + this.backgroundMode.isActive());
-
-      this.backgroundMode.on('enable').subscribe(() => {
-        console.log('-- background mode enabled');
-        this.startWatchData();
-      });
-
-      this.backgroundMode.on('disable').subscribe(() => {
-        console.log('-- background mode disabled');
-        this.stopWatchData();
-      });
-
-      if (this.mainWatcher == null) {
-        // this.backgroundMode.on('activate').subscribe(() => this.startWatchData());
-      }
-      // this.backgroundMode.on('deactivate').subscribe(() => this.backgroundTask());
-      this.backgroundMode.enable();
-      // this.backgroundMode.moveToBackground();
-      // this.enableGPSTracking();
-    });
-  }
-
   ngOnInit() {
+    console.log('Init App');
   }
 
   ngOnDestroy() {
     console.log('ngOnDestory - Home Page');
   }
 
-  startWatchData() {
-    const num: number = Math.floor(Math.random() * (100 - 1)) + 1;
-    const ff = () => this.backgroundTask(num);
-    // tslint:disable-next-line:only-arrow-functions
-    console.log('--start background Task--');
-    this.mainWatcher = setInterval(function () {
-      ff();
-    }, 5000);
-  }
-
-  stopWatchData() {
-    console.log('--stop background Task--');
-    clearInterval(this.mainWatcher);
-  }
-
-  backgroundTask(num: number) {
-    const today: Date = new Date();
-    console.log('task run watch ' + num + ' | ' + `${today.getHours()}:${today.getMinutes()}:${today.getSeconds()}`);
-    // if (this.backgroundMode.isActive()) {
-    //   console.log('run background task');
-    // } else {
-    //   console.log('run foreground task');
-    // }
+  initializeApp() {
+    this.platform.ready().then(() => {
+      // this.statusBar.styleDefault();
+      this.splashScreen.hide();
+      this.backgroundTaskService.init();
+      // this.backgroundMode.on('activate').subscribe(() => this.startWatchData());
+      // this.backgroundMode.on('deactivate').subscribe(() => this.backgroundTask());
+      // this.enableGPSTracking();
+    });
   }
 
   enableGPSTracking() {
