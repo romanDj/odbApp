@@ -27,6 +27,7 @@ import {BluetoothSerial} from '@ionic-native/bluetooth-serial/ngx';
 import {BackgroundMode} from '@ionic-native/background-mode/ngx';
 
 import {BackgroundTaskService} from './services/background-task.service';
+import {ConfigOdbService} from './services/config-odb.service';
 
 const gpsConfig: BackgroundGeolocationConfig = {
   desiredAccuracy: 10,
@@ -58,7 +59,8 @@ export class AppComponent implements OnInit, OnDestroy {
     private sqlite: SQLite,
     private network: Network,
     private http: HTTP,
-    public backgroundTaskService: BackgroundTaskService
+    public backgroundTaskService: BackgroundTaskService,
+    public configOdbService: ConfigOdbService
   ) {
     this.initializeApp();
   }
@@ -75,42 +77,11 @@ export class AppComponent implements OnInit, OnDestroy {
     this.platform.ready().then(() => {
       // this.statusBar.styleDefault();
       this.splashScreen.hide();
+      this.configOdbService.init();
       this.backgroundTaskService.init();
       // this.backgroundMode.on('activate').subscribe(() => this.startWatchData());
       // this.backgroundMode.on('deactivate').subscribe(() => this.backgroundTask());
-      // this.enableGPSTracking();
     });
   }
 
-  enableGPSTracking() {
-    this.backgroundGeolocation.checkStatus().then((status) => {
-      console.log('[INFO] BackgroundGeolocation service is running', status.isRunning);
-      console.log('[INFO] BackgroundGeolocation services enabled', status.locationServicesEnabled);
-      console.log('[INFO] BackgroundGeolocation auth status: ' + status.authorization);
-
-      if (!status.locationServicesEnabled) {
-        return this.backgroundGeolocation.showLocationSettings();
-      }
-      if (status.authorization === BackgroundGeolocationAuthorizationStatus.NOT_AUTHORIZED) {
-        return this.backgroundGeolocation.showAppSettings();
-      }
-    });
-    this.backgroundGeolocation.configure(gpsConfig)
-      .then(() => {
-        this.backgroundGeolocation.on(BackgroundGeolocationEvents.location).subscribe((location: BackgroundGeolocationResponse) => {
-          console.log('[INFO] Location: ' + location.time + ', Lat: ' + location.latitude + ', Lon: ' + location.longitude);
-          const objdata = {
-            name: 'location',
-            value: JSON.stringify({latitude: location.latitude, longitude: location.longitude})
-          };
-          // this.btEventEmit('dataReceived', objdata);
-
-          // IMPORTANT:  You must execute the finish method here to inform the native plugin that you're finished,
-          // and the background-task may be completed.  You must do this regardless if your operations are successful or not.
-          // IF YOU DON'T, ios will CRASH YOUR APP for spending too much time in the background.
-          //  this.backgroundGeolocation.finish(); // FOR IOS ONLY
-        });
-      });
-    this.backgroundGeolocation.start();
-  }
 }
