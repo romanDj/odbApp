@@ -1,5 +1,6 @@
 import {Component, OnDestroy, OnInit} from '@angular/core';
 import {BackgroundTaskService} from '../services/background-task.service';
+import {ConfigOdbService} from '../services/config-odb.service';
 
 @Component({
   selector: 'app-tab1',
@@ -10,7 +11,7 @@ export class Tab1Page implements OnInit, OnDestroy {
 
   statusBackgroundTask = null;
 
-  constructor(public backgroundTaskService: BackgroundTaskService) {}
+  constructor(public backgroundTaskService: BackgroundTaskService, public configOdbService: ConfigOdbService) {}
 
   ngOnInit(){
     this.statusBackgroundTask = this.backgroundTaskService.id;
@@ -25,6 +26,12 @@ export class Tab1Page implements OnInit, OnDestroy {
 
   disableTask(){
     this.backgroundTaskService.disable();
+  }
+
+  loggedConfig(){
+    this.configOdbService.read().then(data => {
+      console.log(data);
+    });
   }
 
 }

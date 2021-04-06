@@ -60,11 +60,11 @@ export class ConfigOdbService {
     const fileEntry: any = await this.accessToFile();
     return await new Promise((resolve, reject) => {
       fileEntry.createWriter((fileWriter) => {
-        try {
-          fileWriter.seek(fileWriter.length);
-        } catch (e) {
-          console.log('[ERROR] file doesn\'t exist');
-        }
+        // try {
+        //   fileWriter.seek(fileWriter.length);
+        // } catch (e) {
+        //   console.log('[ERROR] file doesn\'t exist');
+        // }
         fileWriter.write(JSON.stringify(this.globalconfig));
         resolve();
       }, (err) => {
