@@ -26,11 +26,15 @@ export class BluetoothService {
     private alertCtrl: AlertController) {}
 
 
-  init(): void {
-    this.bluetoothSerial.isEnabled().then(success => {
-      // this.listPairedDevices();
-    }, error => {
-      this.showError('Пожалуйста включите Bluetooth');
+  async init() {
+    return await new Promise((resolve, reject) => {
+      this.bluetoothSerial.isEnabled().then(success => {
+        resolve();
+        // this.listPairedDevices();
+      }, error => {
+        reject();
+        this.showError('Пожалуйста включите Bluetooth');
+      });
     });
   }
 

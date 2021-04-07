@@ -4,9 +4,18 @@ import {BehaviorSubject, Observable} from 'rxjs';
 import {PairedDevice} from './bluetooth.service';
 
 
+
+export interface OdbMetric {
+  metricSelectedToPoll: boolean;
+  name: string;
+  description: string;
+  value: string;
+  unit: string;
+}
+
 export interface ConfigOdb {
   bluetoothDeviceToUse: PairedDevice;
-  odbMetrics: [];
+  odbMetrics: string[];
 }
 
 

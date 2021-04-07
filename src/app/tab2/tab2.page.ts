@@ -1,6 +1,6 @@
 import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
 import {File} from '@ionic-native/file/ngx';
-import {ConfigOdb, ConfigOdbService} from '../services/config-odb.service';
+import {ConfigOdb, ConfigOdbService, OdbMetric} from '../services/config-odb.service';
 import {obdinfo} from '../utils/obdInfo.js';
 import {AlertController} from '@ionic/angular';
 import {BluetoothSerial} from '@ionic-native/bluetooth-serial/ngx';
@@ -16,8 +16,8 @@ import {catchError, take} from 'rxjs/operators';
 })
 export class Tab2Page implements OnInit, OnDestroy {
 
-  public subscription: Subscription;
-  public configOdb: ConfigOdb;
+  subscription: Subscription;
+  configOdb: ConfigOdb;
   isEdit = false;
   isSaving = false;
   alertOptions: any = {
@@ -26,6 +26,8 @@ export class Tab2Page implements OnInit, OnDestroy {
   };
   pairedDevice: PairedDevice;
   pairedDeviceId = '';
+  odbMetrics: OdbMetric[] = [];
+  odbMetricsEnabled: OdbMetric[] = [];
 
   constructor(
     private file: File,
@@ -33,44 +35,24 @@ export class Tab2Page implements OnInit, OnDestroy {
     private alertCtrl: AlertController,
     private bluetoothSerial: BluetoothSerial,
     private bluetoothService: BluetoothService) {
-    this.obdmetrics = [];
   }
-
-  targetList = [];
-  dataSend = '';
-  writeDelay = 50;
-  btReceivedData = '';
-  btLastCheckedReceivedData = '';
-  receivedData = '';
-  btConnected = false;
-  activePollers = [];
-  pollerInterval;
-  queue = [];
-  btLastReceivedData = '';
-  inmemoryqty = 0;
-  globalLog = [];
-  globalLogEnabled = true;   // disable when generating a build
-  defaultbluetoothdev = '';
-  showbluetoothconfig = false;
-  btIsConnecting = false;
-  obdmetrics: OdbMetric[];
-  state = '';
-  lastConnectedToOBD;
-  isNetworkConnectivity = false;
-  uploadingData = false;
-  liveStatsNumRecordsToSend = 0;
-  lastRPMmetricvalue;
-  lastRPMmetricTimestamp;
-  liveStatsBattery = {level: -1, isPlugged: false, lastUnplugged: 0};
-
-  compareWithFn(o1, o2) {
-    return o1 && o2 ? o1.name === o2.name : o1 === o2;
-  }
-
 
   ngOnInit() {
     this.subscription = this.configOdbService.configOdb.subscribe(configOdb$ => {
       this.configOdb = configOdb$;
+      this.odbMetricsEnabled = configOdb$.odbMetrics.map(x => {
+        const getPID = obdinfo.PIDS.find(p => p.name === x);
+        if (getPID) {
+          return {
+            metricSelectedToPoll: true,
+            name: getPID.name,
+            description: getPID.description,
+            value: '',
+            unit: getPID.unit
+          };
+        }
+        return null;
+      }).filter(x => x !== null);
     });
   }
 
@@ -78,22 +60,20 @@ export class Tab2Page implements OnInit, OnDestroy {
     this.subscription.unsubscribe();
   }
 
-  configureMetricsList(): void {
-
-  }
-
-  edit() {
-    this.bluetoothService.init();
-    this.bluetoothService.listPairedDevices();
+  async edit() {
+    this.isEdit = true;
+    this.bluetoothService.init().then(() => {
+      this.bluetoothService.listPairedDevices();
+    });
+    this.configureMetricsList();
     this.pairedDevice = Object.assign({}, this.configOdb.bluetoothDeviceToUse);
     this.pairedDeviceId = Object.assign({}, this.configOdb.bluetoothDeviceToUse).id;
-    this.isEdit = true;
   }
 
   save() {
     this.isSaving = true;
     this.configOdbService.update({
-      ...this.configOdb,
+      odbMetrics: this.odbMetrics.filter(x => x.metricSelectedToPoll).map(x => x.name),
       bluetoothDeviceToUse: Object.assign({}, this.pairedDevice)
     }).finally(() => {
       this.isSaving = false;
@@ -105,24 +85,46 @@ export class Tab2Page implements OnInit, OnDestroy {
     this.isEdit = false;
   }
 
+  // Bluetooth
 
   selectBtDevice(ev) {
     if (ev.detail.value === null || ev.detail.value < 0) {
       return;
     }
-    const subscription = this.bluetoothService.pairedList.pipe(
+    this.bluetoothService.pairedList.pipe(
       take(1)
     ).subscribe((pairedList) => {
       this.pairedDevice = pairedList.find(x => x.id === ev.detail.value);
     });
   }
 
-}
 
-interface OdbMetric {
-  metricSelectedToPoll: boolean;
-  name: string;
-  description: string;
-  value: string;
-  unit: string;
+  // Metrics
+
+  configureMetricsList() {
+    this.odbMetrics = [];
+    obdinfo.PIDS.forEach((val, i) => {
+      if (val.mode === obdinfo.modeRealTime && val.name !== '') {
+        this.odbMetrics.push({
+          metricSelectedToPoll: !!this.configOdb.odbMetrics.find(x => x === val.name),
+          name: val.name,
+          description: val.description,
+          value: '',
+          unit: val.unit
+        });
+      }
+    });
+  }
+
+  resetMetrics() {
+    this.odbMetrics.forEach((val, n) => {
+      const item = obdinfo.PIDS[n];
+      if (item.mode === obdinfo.modeRealTime && item.name !== ''){
+        if (val.metricSelectedToPoll !== item.isDefault) {
+          val.metricSelectedToPoll = item.isDefault;
+        }
+      }
+    });
+  }
+
 }

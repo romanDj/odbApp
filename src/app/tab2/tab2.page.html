@@ -7,8 +7,25 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" class="ion-padding">
+
+  <ion-fab vertical="bottom" slot="fixed" class="edit-fixed-bt">
+    <ion-button expand="block" (click)="edit()" *ngIf="!isEdit; else saveButtonsFab">Редактировать</ion-button>
+    <ng-template #saveButtonsFab>
+      <ion-row>
+        <ion-col class="ion-no-padding">
+          <ion-button color="medium" [disabled]="isSaving" (click)="cancel()" expand="block">Отмена</ion-button>
+        </ion-col>
+        <ion-col class="ion-no-padding">
+          <ion-button color="success" (click)="save()" [disabled]="isSaving" expand="block">
+            {{isSaving ? 'Сохранение...' : 'Сохранить'}}
+          </ion-button>
+        </ion-col>
+      </ion-row>
+    </ng-template>
+  </ion-fab>
+
   <ion-grid class="ion-no-padding" *ngIf="!isEdit; else editBlock">
-    <ion-list class="ion-no-padding">
+    <ion-list class="ion-no-padding ion-padding-bottom">
       <ion-item class="ion-no-padding">
         <ion-label>
           <div class="bluetooth-label">
@@ -21,21 +38,38 @@
           configOdb.bluetoothDeviceToUse.name.substring(0, 16) : 'не выбрано'}}</ion-note>
       </ion-item>
     </ion-list>
-  </ion-grid>
+    <br>
+    <ion-list class="metrics-list">
+      <ion-list-header style="margin-left: 0; padding-left: 0;">Метрики</ion-list-header>
+      <div *ngIf="odbMetricsEnabled.length > 0; else emptyMetricsList">
+        <ion-item class="ion-no-padding" *ngFor="let i of odbMetricsEnabled">
+          <ion-label>{{i.description}}</ion-label>
+          <ion-note
+            slot="end" color="success">On</ion-note>
+        </ion-item>
+      </div>
+      <ng-template #emptyMetricsList>
+        <br>
+        <ion-text color="medium" style="display: block">-- список пуст -- </ion-text>
+      </ng-template>
 
+    </ion-list>
+
+  </ion-grid>
   <ng-template #editBlock>
     <ion-grid class="ion-no-padding">
 
       <ion-list class="ion-no-padding">
         <ion-item class="ion-no-padding">
-          <ion-label>
-            <div class="bluetooth-label">
+          <ion-label position="stacked">
+            <div class="bluetooth-label-edit">
               <ion-icon slot="start" name="bluetooth" style="color:#5c6bc0;"></ion-icon>
               <span>устройство</span>
             </div>
           </ion-label>
           <ng-container *ngIf="bluetoothService.pairedList | async as pairedList; else pairedListEmpty">
             <ion-select
+              class="bluetooth-input"
               *ngIf="pairedList.length > 0; else pairedListEmpty"
               [interfaceOptions]="alertOptions" interface="alert"
               [(ngModel)]="pairedDeviceId"
@@ -57,25 +91,24 @@
           </ng-template>
         </ion-item>
       </ion-list>
+      <br>
+      <ion-list class="ion-no-padding metrics-list">
+        <ion-list-header class="ion-no-padding">Метрики</ion-list-header>
+
+        <section style="padding-bottom: 10px">
+          <header> </header>
+          <ion-button (click)="resetMetrics()" expand="block"><ion-icon name="refresh"></ion-icon>Установить по умолчанию</ion-button>
+        </section>
+
+        <ion-item class="ion-no-padding" *ngFor="let i of odbMetrics;let j=index">
+          <ion-label>{{i.description}}</ion-label>
+          <ion-toggle slot="end" color="success"
+                      [(ngModel)]="i.metricSelectedToPoll"
+                      [disabled]="i.name==='rpm'"></ion-toggle>
+        </ion-item>
+      </ion-list>
 
     </ion-grid>
   </ng-template>
-
-  <ion-fab vertical="bottom" slot="fixed" class="edit-fixed-bt">
-    <ion-button expand="block" (click)="edit()" *ngIf="!isEdit; else saveButtonsFab">Редактировать</ion-button>
-    <ng-template #saveButtonsFab>
-      <ion-row>
-        <ion-col class="ion-no-padding">
-          <ion-button color="medium" [disabled]="isSaving" (click)="cancel()" expand="block">Отмена</ion-button>
-        </ion-col>
-        <ion-col class="ion-no-padding">
-          <ion-button color="success" (click)="save()" [disabled]="isSaving" expand="block">
-            {{isSaving ? 'Сохранение...' : 'Сохранить'}}
-          </ion-button>
-        </ion-col>
-      </ion-row>
-    </ng-template>
-  </ion-fab>
-
 
 </ion-content>
