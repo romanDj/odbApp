@@ -7,36 +7,75 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" class="ion-padding">
-  <ion-grid>
-    <ion-row>
-      <ion-col>
-        <ion-icon name="bluetooth" style="color:#5c6bc0" class="ion-iconXL"></ion-icon>
-        <br>
-        <ion-label> {{bluetoothService.connstatus}} </ion-label>
-        <ion-label></ion-label>
-
-        <ion-select
-          *ngIf="bluetoothService.pairedList && bluetoothService.pairedList.length > 0; else pairedListEmpty"
-          [interfaceOptions]="alertOptions" interface="alert"
-          [(ngModel)]="bluetoothService.pairedDeviceID"
-          (ionChange)="bluetoothService.selectBtDevice($event)"
-          (ionFocus)="bluetoothService.init()"
-          [selectedText]="configOdbService.globalconfig.bluetoothDeviceToUse.devicename.substring(0,16)"
-          placeholder="Выберите устройство"
-          cancelText="Отмена">
-          <ion-select-option *ngFor="let i of bluetoothService.pairedList;let j=index"
-                             value="{{j}}" selected="{{i.isSelected}}">
-            <span>{{i.name}}</span>
-          </ion-select-option>
-        </ion-select>
-        <ng-template #pairedListEmpty>
-          <p>Нет видимых устройств</p>
-        </ng-template>
-      </ion-col>
-
-
-    </ion-row>
-    <p></p>
-
+  <ion-grid class="ion-no-padding" *ngIf="!isEdit; else editBlock">
+    <ion-list class="ion-no-padding">
+      <ion-item class="ion-no-padding">
+        <ion-label>
+          <div class="bluetooth-label">
+            <ion-icon slot="start" name="bluetooth" style="color:#5c6bc0;"></ion-icon>
+            <span>устройство</span>
+          </div>
+        </ion-label>
+        <ion-note
+          slot="end">{{configOdb.bluetoothDeviceToUse.name ?
+          configOdb.bluetoothDeviceToUse.name.substring(0, 16) : 'не выбрано'}}</ion-note>
+      </ion-item>
+    </ion-list>
   </ion-grid>
+
+  <ng-template #editBlock>
+    <ion-grid class="ion-no-padding">
+
+      <ion-list class="ion-no-padding">
+        <ion-item class="ion-no-padding">
+          <ion-label>
+            <div class="bluetooth-label">
+              <ion-icon slot="start" name="bluetooth" style="color:#5c6bc0;"></ion-icon>
+              <span>устройство</span>
+            </div>
+          </ion-label>
+          <ng-container *ngIf="bluetoothService.pairedList | async as pairedList; else pairedListEmpty">
+            <ion-select
+              *ngIf="pairedList.length > 0; else pairedListEmpty"
+              [interfaceOptions]="alertOptions" interface="alert"
+              [(ngModel)]="pairedDeviceId"
+              (ionChange)="selectBtDevice($event)"
+              [selectedText]="pairedDevice.name.substring(0, 16)"
+              placeholder=""
+              cancelText="Отмена">
+              <ion-select-option *ngFor="let i of pairedList;let j=index"
+                                 value="{{i.id}}"
+                                 selected="{{i.address === pairedDevice.address}}">
+                <span>{{i.name}}</span>
+              </ion-select-option>
+            </ion-select>
+          </ng-container>
+          <ng-template #pairedListEmpty>
+            <ion-note
+              slot="end">Нет видимых устройств
+            </ion-note>
+          </ng-template>
+        </ion-item>
+      </ion-list>
+
+    </ion-grid>
+  </ng-template>
+
+  <ion-fab vertical="bottom" slot="fixed" class="edit-fixed-bt">
+    <ion-button expand="block" (click)="edit()" *ngIf="!isEdit; else saveButtonsFab">Редактировать</ion-button>
+    <ng-template #saveButtonsFab>
+      <ion-row>
+        <ion-col class="ion-no-padding">
+          <ion-button color="medium" [disabled]="isSaving" (click)="cancel()" expand="block">Отмена</ion-button>
+        </ion-col>
+        <ion-col class="ion-no-padding">
+          <ion-button color="success" (click)="save()" [disabled]="isSaving" expand="block">
+            {{isSaving ? 'Сохранение...' : 'Сохранить'}}
+          </ion-button>
+        </ion-col>
+      </ion-row>
+    </ng-template>
+  </ion-fab>
+
+
 </ion-content>

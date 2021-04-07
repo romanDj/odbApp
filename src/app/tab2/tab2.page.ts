@@ -1,10 +1,12 @@
-import {Component} from '@angular/core';
+import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
 import {File} from '@ionic-native/file/ngx';
-import {ConfigOdbService} from '../services/config-odb.service';
+import {ConfigOdb, ConfigOdbService} from '../services/config-odb.service';
 import {obdinfo} from '../utils/obdInfo.js';
 import {AlertController} from '@ionic/angular';
 import {BluetoothSerial} from '@ionic-native/bluetooth-serial/ngx';
-import {BluetoothService} from '../services/bluetooth.service';
+import {BluetoothService, PairedDevice} from '../services/bluetooth.service';
+import {Subscription} from 'rxjs';
+import {catchError, take} from 'rxjs/operators';
 
 
 @Component({
@@ -12,21 +14,27 @@ import {BluetoothService} from '../services/bluetooth.service';
   templateUrl: 'tab2.page.html',
   styleUrls: ['tab2.page.scss']
 })
-export class Tab2Page {
+export class Tab2Page implements OnInit, OnDestroy {
+
+  public subscription: Subscription;
+  public configOdb: ConfigOdb;
+  isEdit = false;
+  isSaving = false;
+  alertOptions: any = {
+    header: 'Список устройств',
+    translucent: true
+  };
+  pairedDevice: PairedDevice;
+  pairedDeviceId = '';
 
   constructor(
     private file: File,
-    public configOdbService: ConfigOdbService,
+    private configOdbService: ConfigOdbService,
     private alertCtrl: AlertController,
     private bluetoothSerial: BluetoothSerial,
     private bluetoothService: BluetoothService) {
     this.obdmetrics = [];
   }
-
-  alertOptions: any = {
-    header: 'Список устройств',
-    translucent: true
-  };
 
   targetList = [];
   dataSend = '';
@@ -59,18 +67,56 @@ export class Tab2Page {
     return o1 && o2 ? o1.name === o2.name : o1 === o2;
   }
 
+
+  ngOnInit() {
+    this.subscription = this.configOdbService.configOdb.subscribe(configOdb$ => {
+      this.configOdb = configOdb$;
+    });
+  }
+
+  ngOnDestroy() {
+    this.subscription.unsubscribe();
+  }
+
   configureMetricsList(): void {
 
   }
 
-}
+  edit() {
+    this.bluetoothService.init();
+    this.bluetoothService.listPairedDevices();
+    this.pairedDevice = Object.assign({}, this.configOdb.bluetoothDeviceToUse);
+    this.pairedDeviceId = Object.assign({}, this.configOdb.bluetoothDeviceToUse).id;
+    this.isEdit = true;
+  }
 
-interface PairedList {
-  class: number;
-  id: string;
-  address: string;
-  name: string;
-  isSelected: boolean;
+  save() {
+    this.isSaving = true;
+    this.configOdbService.update({
+      ...this.configOdb,
+      bluetoothDeviceToUse: Object.assign({}, this.pairedDevice)
+    }).finally(() => {
+      this.isSaving = false;
+      this.isEdit = false;
+    });
+  }
+
+  cancel() {
+    this.isEdit = false;
+  }
+
+
+  selectBtDevice(ev) {
+    if (ev.detail.value === null || ev.detail.value < 0) {
+      return;
+    }
+    const subscription = this.bluetoothService.pairedList.pipe(
+      take(1)
+    ).subscribe((pairedList) => {
+      this.pairedDevice = pairedList.find(x => x.id === ev.detail.value);
+    });
+  }
+
 }
 
 interface OdbMetric {

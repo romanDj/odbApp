@@ -14,7 +14,7 @@ export class TabsPage {
   constructor(private platform: Platform,
               private routerOutlet: IonRouterOutlet,
               private backgroundMode: BackgroundMode,
-              public toastController: ToastController) {
+              private toastController: ToastController) {
     this.platform.backButton.subscribeWithPriority(-1, () => {
       if (!this.routerOutlet.canGoBack()) {
         // navigator['app'].exitApp();

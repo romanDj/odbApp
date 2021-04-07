@@ -53,22 +53,22 @@ export class AppComponent implements OnInit, OnDestroy {
     private statusBar: StatusBar,
     private backgroundGeolocation: BackgroundGeolocation,
     private file: File, private batteryStatus: BatteryStatus,
-    public navCtrl: NavController,
+    private navCtrl: NavController,
     private alertCtrl: AlertController,
     private bluetoothSerial: BluetoothSerial,
     private toastCtrl: ToastController,
     private sqlite: SQLite,
     private network: Network,
     private http: HTTP,
-    public backgroundTaskService: BackgroundTaskService,
-    public configOdbService: ConfigOdbService,
+    private backgroundTaskService: BackgroundTaskService,
+    private configOdbService: ConfigOdbService,
     private bluetoothService: BluetoothService
   ) {
-    this.initializeApp();
   }
 
   ngOnInit() {
     console.log('Init App');
+    this.initializeApp();
   }
 
   ngOnDestroy() {

@@ -2,26 +2,33 @@ import {Injectable} from '@angular/core';
 import {ConfigOdbService} from './config-odb.service';
 import {BluetoothSerial} from '@ionic-native/bluetooth-serial/ngx';
 import {AlertController} from '@ionic/angular';
+import {BehaviorSubject} from 'rxjs';
+
+
+export interface PairedDevice {
+  id: string;
+  address: string;
+  name: string;
+}
+
 
 @Injectable({
   providedIn: 'root'
 })
 export class BluetoothService {
 
-  constructor(
-    public configOdbService: ConfigOdbService,
-    private bluetoothSerial: BluetoothSerial,
-    private alertCtrl: AlertController) {
-  }
+  private pairedList$: BehaviorSubject<PairedDevice[]> = new BehaviorSubject<PairedDevice[]>([]);
+  readonly pairedList = this.pairedList$.asObservable();
 
-  pairedList: PairedList[];
-  listToggle = false;
-  pairedDeviceID = 0;
-  connstatus = '';
+  constructor(
+    private configOdbService: ConfigOdbService,
+    private bluetoothSerial: BluetoothSerial,
+    private alertCtrl: AlertController) {}
+
 
   init(): void {
     this.bluetoothSerial.isEnabled().then(success => {
-      this.listPairedDevices();
+      // this.listPairedDevices();
     }, error => {
       this.showError('Пожалуйста включите Bluetooth');
     });
@@ -38,47 +45,13 @@ export class BluetoothService {
 
   listPairedDevices() {
     this.bluetoothSerial.list().then(success => {
-      console.log('list bloo');
-      console.log(success);
-      this.pairedList = success;
-      this.pairedList.forEach(item => item.isSelected = false);
-      this.listToggle = true;
-      console.log('Reading default device data: ' + this.configOdbService.globalconfig.bluetoothDeviceToUse.devicename);
-      if (this.configOdbService.globalconfig.bluetoothDeviceToUse == null
-        || this.configOdbService.globalconfig.bluetoothDeviceToUse.devicename === '') {
-        return;
-      }
-      const i = this.pairedList.findIndex(item =>
-        item.address === this.configOdbService.globalconfig.bluetoothDeviceToUse.address);
-      if (i > -1) {
-        this.pairedList[i].isSelected = true;
-      }
-
+      this.pairedList$.next(success ? success.map(x => ({
+        id: x.id,
+        address: x.address ? x.address : x.uuid,
+        name: x.name
+      })) : []);
     }, error => {
       this.showError('Пожалуйста включите Bluetooth');
-      this.listToggle = false;
     });
   }
-
-  selectBtDevice(ev) {
-    if (ev.detail.value === null || ev.detail.value < 0) {
-      return;
-    }
-    console.log('Changed BT device to use:' + this.pairedList[ev.detail.value].name);
-    this.configOdbService.globalconfig.bluetoothDeviceToUse = {
-      address: this.pairedList[ev.detail.value].address,
-      devicename: this.pairedList[ev.detail.value].name
-    };
-    this.configOdbService.save();
-  }
-
-}
-
-
-interface PairedList {
-  class: number;
-  id: string;
-  address: string;
-  name: string;
-  isSelected: boolean;
 }

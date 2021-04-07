@@ -1,6 +1,7 @@
 import {Component, OnDestroy, OnInit} from '@angular/core';
 import {BackgroundTaskService} from '../services/background-task.service';
-import {ConfigOdbService} from '../services/config-odb.service';
+import {ConfigOdb, ConfigOdbService} from '../services/config-odb.service';
+import {Subscription} from 'rxjs';
 
 @Component({
   selector: 'app-tab1',
@@ -9,15 +10,21 @@ import {ConfigOdbService} from '../services/config-odb.service';
 })
 export class Tab1Page implements OnInit, OnDestroy {
 
-  statusBackgroundTask = null;
+  public subscription: Subscription;
+  public configOdb: ConfigOdb;
 
-  constructor(public backgroundTaskService: BackgroundTaskService, public configOdbService: ConfigOdbService) {}
+  constructor(
+    private backgroundTaskService: BackgroundTaskService,
+    private configOdbService: ConfigOdbService) {}
 
   ngOnInit(){
-    this.statusBackgroundTask = this.backgroundTaskService.id;
+    this.subscription =  this.configOdbService.configOdb.subscribe(configOdb$ => {
+      this.configOdb = configOdb$;
+    });
   }
 
   ngOnDestroy() {
+    this.subscription.unsubscribe();
   }
 
   enableTask(){
@@ -29,9 +36,7 @@ export class Tab1Page implements OnInit, OnDestroy {
   }
 
   loggedConfig(){
-    this.configOdbService.read().then(data => {
-      console.log(data);
-    });
+    console.log(this.configOdb);
   }
 
 }
