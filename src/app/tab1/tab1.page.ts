@@ -2,6 +2,8 @@ import {Component, OnDestroy, OnInit} from '@angular/core';
 import {BackgroundTaskService} from '../services/background-task.service';
 import {ConfigOdb, ConfigOdbService} from '../services/config-odb.service';
 import {Subscription} from 'rxjs';
+import {take} from 'rxjs/operators';
+import {Platform} from '@ionic/angular';
 
 @Component({
   selector: 'app-tab1',
@@ -10,15 +12,18 @@ import {Subscription} from 'rxjs';
 })
 export class Tab1Page implements OnInit, OnDestroy {
 
-  public subscription: Subscription;
-  public configOdb: ConfigOdb;
+  subscription: Subscription;
+  resumeSubscription: Subscription;
+  configOdb: ConfigOdb;
 
   constructor(
+    private platform: Platform,
     private backgroundTaskService: BackgroundTaskService,
-    private configOdbService: ConfigOdbService) {}
+    private configOdbService: ConfigOdbService) {
+  }
 
-  ngOnInit(){
-    this.subscription =  this.configOdbService.configOdb.subscribe(configOdb$ => {
+  ngOnInit() {
+    this.subscription = this.configOdbService.configOdb.subscribe(configOdb$ => {
       this.configOdb = configOdb$;
     });
   }
@@ -27,15 +32,26 @@ export class Tab1Page implements OnInit, OnDestroy {
     this.subscription.unsubscribe();
   }
 
-  enableTask(){
-    this.backgroundTaskService.enable();
+  ionViewDidEnter() {
+    this.resumeSubscription = this.platform.resume.subscribe(async () => {
+      this.backgroundTaskService.updateStatus();
+    });
+    this.backgroundTaskService.updateStatus();
   }
 
-  disableTask(){
-    this.backgroundTaskService.disable();
+  ionViewDidLeave() {
+    this.resumeSubscription.unsubscribe();
   }
 
-  loggedConfig(){
+  statusClick(val) {
+    if (val) {
+      this.backgroundTaskService.disable();
+    } else {
+      this.backgroundTaskService.enable();
+    }
+  }
+
+  loggedConfig() {
     console.log(this.configOdb);
   }
 

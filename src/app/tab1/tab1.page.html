@@ -7,17 +7,26 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" class="ion-padding">
-  <ion-button (click)="enableTask()"  color="primary">Включить</ion-button>
-  <br>
-  <ion-button (click)="disableTask()" color="danger">Выключить</ion-button>
-  <br>
+  <ion-item lines="false" style="padding-bottom: 20px">
+    <ion-label>Сбор данных</ion-label>
+
+    <ng-container *ngTemplateOutlet="appTpl;
+        context: {
+          status: backgroundTaskService.statusTask | async
+        }"></ng-container>
+    <ng-template #appTpl let-status="status">
+      <ion-button slot="end"
+                  *ngIf="!status"
+                  (click)="statusClick(status)"
+                  size="small">Вкл.
+      </ion-button>
+      <ion-button slot="end"
+                  *ngIf="status"
+                  (click)="statusClick(status)"
+                  size="small" color="danger">Выкл.
+      </ion-button>
+    </ng-template>
+
+  </ion-item>
   <ion-button (click)="loggedConfig()" color="danger">Показать конфиг</ion-button>
-
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Tab 11</ion-title>
-    </ion-toolbar>
-  </ion-header>
-
-  <app-explore-container name="Tab 11 page"></app-explore-container>
 </ion-content>

@@ -7,6 +7,8 @@ import {BluetoothSerial} from '@ionic-native/bluetooth-serial/ngx';
 import {BluetoothService, PairedDevice} from '../services/bluetooth.service';
 import {Subscription} from 'rxjs';
 import {catchError, take} from 'rxjs/operators';
+import {BackgroundTaskService} from '../services/background-task.service';
+
 
 
 @Component({
@@ -32,6 +34,7 @@ export class Tab2Page implements OnInit, OnDestroy {
   constructor(
     private file: File,
     private configOdbService: ConfigOdbService,
+    private backgroundTaskService: BackgroundTaskService,
     private alertCtrl: AlertController,
     private bluetoothSerial: BluetoothSerial,
     private bluetoothService: BluetoothService) {
@@ -60,8 +63,18 @@ export class Tab2Page implements OnInit, OnDestroy {
     this.subscription.unsubscribe();
   }
 
+  ionViewDidEnter(){
+    // console.log('page 2 visible');
+  }
+
+  ionViewDidLeave(){
+    // console.log('page 2 hidden');
+    this.isEdit = false;
+  }
+
   async edit() {
     this.isEdit = true;
+    this.backgroundTaskService.disable();
     this.bluetoothService.init().then(() => {
       this.bluetoothService.listPairedDevices();
     });

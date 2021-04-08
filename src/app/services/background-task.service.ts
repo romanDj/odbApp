@@ -9,7 +9,7 @@ import {
   BackgroundGeolocationAuthorizationStatus
 } from '@ionic-native/background-geolocation/ngx';
 
-import {interval, Observable, Subscription} from 'rxjs';
+import {BehaviorSubject, interval, Observable, Subscription} from 'rxjs';
 
 
 const gpsConfig: BackgroundGeolocationConfig = {
@@ -31,6 +31,8 @@ export class BackgroundTaskService {
   id: number;
   subscription: Subscription;
   lifecycle;
+  private statusTask$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  readonly statusTask = this.statusTask$.asObservable();
 
   constructor(public backgroundMode: BackgroundMode, public backgroundGeolocation: BackgroundGeolocation) {
   }
@@ -54,11 +56,13 @@ export class BackgroundTaskService {
       console.log('-- background mode enabled');
       this.backgroundMode.disableWebViewOptimizations();
       this.start();
+      this.statusTask$.next(true);
     });
 
     this.backgroundMode.on('disable').subscribe(() => {
       console.log('-- background mode disabled');
       this.stop();
+      this.statusTask$.next(false);
     });
 
     // init geolocation
@@ -85,6 +89,14 @@ export class BackgroundTaskService {
 
   stop(): void {
     this.subscription.unsubscribe();
+  }
+
+  updateStatus(val?: boolean): void {
+    if (val !== undefined && val != null) {
+      this.statusTask$.next(val);
+    } else {
+      this.statusTask$.next(this.backgroundMode.isEnabled());
+    }
   }
 
   async task(): Promise<any> {

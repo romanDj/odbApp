@@ -35,18 +35,8 @@ export class ConfigOdbService {
 
   readonly configOdb = this.configOdb$.asObservable();
 
-  globalconfig: any = {
-    obdmetrics: [],
-    dataUpload: {apikey: '', apisecret: '', localserver: '', mode: ''},
-    bluetoothDeviceToUse: {address: '', devicename: ''},
-    sendstatusinfo: false
-  };
-
   constructor(private file: File) {}
 
-  compareWithFn(o1, o2) {
-    return o1 && o2 ? o1.name === o2.name : o1 === o2;
-  }
 
   init(): void {
     this.read().then((data) => {
