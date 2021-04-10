@@ -1,4 +1,4 @@
-import {Component, OnDestroy, OnInit} from '@angular/core';
+import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
 import {BackgroundTaskService} from '../services/background-task.service';
 import {ConfigOdb, ConfigOdbService} from '../services/config-odb.service';
 import {Subscription} from 'rxjs';

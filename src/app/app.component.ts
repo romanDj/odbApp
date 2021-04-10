@@ -75,11 +75,11 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   initializeApp() {
-    this.platform.ready().then(() => {
+    this.platform.ready().then(async () => {
       // this.statusBar.styleDefault();
       this.splashScreen.hide();
-      this.configOdbService.init();
-      this.bluetoothService.init();
+      await this.configOdbService.init();
+      await this.bluetoothService.init();
       this.backgroundTaskService.init();
       // this.backgroundMode.on('activate').subscribe(() => this.startWatchData());
       // this.backgroundMode.on('deactivate').subscribe(() => this.backgroundTask());

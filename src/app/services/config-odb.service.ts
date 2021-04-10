@@ -2,6 +2,8 @@ import {Injectable} from '@angular/core';
 import {File, FileEntry} from '@ionic-native/file/ngx';
 import {BehaviorSubject, Observable} from 'rxjs';
 import {PairedDevice} from './bluetooth.service';
+import {map} from 'rxjs/operators';
+import {obdinfo} from '../utils/obdInfo.js';
 
 
 
@@ -32,28 +34,25 @@ export class ConfigOdbService {
       name: ''
     }
   });
-
   readonly configOdb = this.configOdb$.asObservable();
 
   constructor(private file: File) {}
 
-
-  init(): void {
-    this.read().then((data) => {
-      if (data != null && typeof data === 'string' && data.length > 0){
-        try {
-          const dt = JSON.parse(data);
-          this.configOdb$.next(dt);
-        }catch (e) {
-          this.emptySave();
-        }
-      }else{
-        this.emptySave();
+  async init() {
+    const data = await this.read();
+    if (data != null && typeof data === 'string' && data.length > 0){
+      try {
+        const dt = JSON.parse(data);
+        this.configOdb$.next(dt);
+      }catch (e) {
+        await this.emptySave();
       }
-    });
+    }else{
+      await this.emptySave();
+    }
   }
 
-  emptySave(){
+  async emptySave(){
     const cfg: ConfigOdb = {
       odbMetrics: [],
       bluetoothDeviceToUse: {
@@ -62,7 +61,7 @@ export class ConfigOdbService {
         name: ''
       }
     };
-    this.save(cfg);
+    await this.save(cfg);
     this.configOdb$.next(cfg);
   }
 

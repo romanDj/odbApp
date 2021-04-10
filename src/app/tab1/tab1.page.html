@@ -28,5 +28,6 @@
     </ng-template>
 
   </ion-item>
+  <p>Статус подключения - {{backgroundTaskService.connStatus | async}}</p>
   <ion-button (click)="loggedConfig()" color="danger">Показать конфиг</ion-button>
 </ion-content>
