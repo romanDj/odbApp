@@ -1,17 +1,32 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
     <ion-title>
-      Файлы
+      Данные
     </ion-title>
+    <ion-buttons slot="end">
+      <ion-button id="changeText" (click)="loadData()">
+        <ion-icon slot="start" name="refresh"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true" class="ion-padding">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Tab 3</ion-title>
-    </ion-toolbar>
-  </ion-header>
-
-  <app-explore-container name="Tab 3 page"></app-explore-container>
+  <ion-list>
+    <ion-item *ngFor="let i of liveMetrics">
+      <ion-label>
+        <h2>{{i.description}}</h2>
+        <strong style="display: block;margin-bottom: 5px">
+          <ion-note slot="end" color="primary" *ngIf="i.name !=='location'">{{i.value }} {{i.unit}}</ion-note>
+          <ion-note slot="end" color="primary" *ngIf="i.name =='location'">
+            lat: {{i.value.latitude }} | long: {{i.value.longitude }}
+          </ion-note>
+        </strong>
+        <ion-text style="display:block;" [color]="i.isSend == 0 ? 'danger' : 'success'">
+          {{i.isSend == 0 ? 'Не отправлено' : 'Синхронизировано'}}
+        </ion-text>
+        <p class="ion-padding-top">{{i.ts}}</p>
+      </ion-label>
+    </ion-item>
+  </ion-list>
 </ion-content>

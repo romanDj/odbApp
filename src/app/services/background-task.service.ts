@@ -27,7 +27,7 @@ import {
   filter,
   mergeMap,
   map,
-  first, scan
+  first, scan, publish, share
 } from 'rxjs/operators';
 import {BluetoothService} from './bluetooth.service';
 import {ConfigOdb, ConfigOdbService} from './config-odb.service';
@@ -35,6 +35,8 @@ import {obdinfo} from '../utils/obdInfo.js';
 import * as moment from 'moment';
 import * as _ from 'underscore';
 import {rejects} from 'assert';
+import {SQLite, SQLiteObject} from '@ionic-native/sqlite/ngx';
+import {LiveMetricsService} from './live-metrics.service';
 
 
 const gpsConfig: BackgroundGeolocationConfig = {
@@ -47,7 +49,6 @@ const gpsConfig: BackgroundGeolocationConfig = {
   stopOnTerminate: true,
   notificationTitle: 'Сбор данных odb и геопозиции включен'
 };
-
 
 
 /**
@@ -98,10 +99,12 @@ export class BackgroundTaskService {
     private alertCtrl: AlertController,
     private file: File,
     private bluetoothService: BluetoothService,
-    private configOdbService: ConfigOdbService) {
+    private configOdbService: ConfigOdbService,
+    private sqlite: SQLite,
+    private liveMetricsService: LiveMetricsService) {
   }
 
-  init(): void {
+  async init() {
     this.backgroundMode.setDefaults({
       title: 'odbApp',
       text: 'Данные считываются с odb в реальном времени',
@@ -119,7 +122,7 @@ export class BackgroundTaskService {
           return {
             metricSelectedToPoll: true,
             name: getPID.name,
-            description: getPID.description,
+            description: getPID.description ? getPID.description : '',
             value: '',
             unit: getPID.unit
           };
@@ -127,7 +130,6 @@ export class BackgroundTaskService {
         return null;
       }).filter(x => x !== null);
     });
-
 
     // подписка на запуск фоновой задачи
     this.backgroundMode.on('enable').pipe(
@@ -154,7 +156,7 @@ export class BackgroundTaskService {
         )
       )
     ).subscribe();
-
+    // await this.initDB();
     this.subscribeToNetworkChanges();
     this.enableGPSTracking();
   }
@@ -271,11 +273,11 @@ export class BackgroundTaskService {
       .then(() => {
         this.backgroundGeolocation.on(BackgroundGeolocationEvents.location).subscribe((location: BackgroundGeolocationResponse) => {
           console.log('[INFO] Location: ' + location.time + ', Lat: ' + location.latitude + ', Lon: ' + location.longitude);
-          const objdata = {
+          const objData = {
             name: 'location',
             value: JSON.stringify({latitude: location.latitude, longitude: location.longitude})
           };
-          // this.btEventEmit('dataReceived', objdata);
+          this.btEventEmit('dataReceived', objData);
 
           // for ios
           this.backgroundGeolocation.startTask().then((taskKey: number): void => {
@@ -299,6 +301,8 @@ export class BackgroundTaskService {
             config.bluetoothDeviceToUse.address.length === 0) {
             throw new Error('Device no selected');
           }
+          this.connStatus$.next('Подключено');
+          this.btIsConnecting = true;
           return this.connectBluetooth(
             config.bluetoothDeviceToUse.address,
             config.bluetoothDeviceToUse.name
@@ -312,8 +316,6 @@ export class BackgroundTaskService {
   }
 
   connectBluetooth(address, name): Observable<any> {
-    this.connStatus$.next('Соединение...');
-    this.btIsConnecting = true;
     return this.bluetoothSerial.connect(address).pipe(
       tap((val) => {
         console.log('connected');
@@ -343,7 +345,6 @@ export class BackgroundTaskService {
       this.bluetoothSerial.subscribe('>').pipe(
         tap((val) => {
           this.btDataReceived(val);
-          console.log('data - ' + val);
         }),
         catchError((err) => {
           console.log('[error] Received error - ' + err);
@@ -401,7 +402,9 @@ export class BackgroundTaskService {
       return;
     }
     console.log('[INFO] Metric for ' + JSON.stringify(text));
-    pdata = {ts: Date.now(), name: text.name, value: text.value};
+    pdata = {ts: moment().valueOf(), name: text.name, value: text.value};
+
+    this.liveMetricsService.push(pdata.name, pdata.value, pdata.ts);
 
     if (pdata.name === 'rpm') {
       this.lastRPMmetricTimestamp = pdata.ts;
@@ -411,7 +414,7 @@ export class BackgroundTaskService {
       if (this.liveMetrics[pdata.name] === undefined) {
         const mt = _.findWhere(this.odbMetrics, {name: pdata.name});
         this.liveMetrics[pdata.name] = {};
-        this.liveMetrics[pdata.name].description = mt.description;
+        this.liveMetrics[pdata.name].description = mt.description ? mt.description : '';
         this.liveMetrics[pdata.name].name = mt.name;
         this.liveMetrics[pdata.name].unit = mt.unit;
         this.liveMetrics[pdata.name].type = '';
@@ -627,4 +630,5 @@ export class BackgroundTaskService {
     this.lastConnectedToOBD = Date.now();
     // this.backgroundGeolocation.stop();
   }
+
 }
