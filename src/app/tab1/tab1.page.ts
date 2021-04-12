@@ -55,4 +55,12 @@ export class Tab1Page implements OnInit, OnDestroy {
     console.log(this.configOdb);
   }
 
+  loggedMetrics(){
+    console.log('--values metrics--');
+    console.log(JSON.stringify(this.backgroundTaskService.lastRPMmetricvalue));
+    console.log(JSON.stringify(this.backgroundTaskService.lastRPMmetricTimestamp));
+    console.log(JSON.stringify(this.backgroundTaskService.liveMetrics));
+    console.log('--end metrics--');
+  }
+
 }

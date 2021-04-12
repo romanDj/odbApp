@@ -78,13 +78,10 @@ export class BackgroundTaskService {
   lastConnectedToOBD;
   btIsConnecting = false;
   btConnected = false;
-  btSubscription: Subscription = new Subscription();
   queue = [];
   receivedData = '';
   activePollers = [];
   writeDelay = 50;
-  pollerInterval;
-  btIntervalWriter;
   lastRPMmetricvalue;
   lastRPMmetricTimestamp;
   liveMetrics = {};
@@ -174,6 +171,7 @@ export class BackgroundTaskService {
   }
 
   enable(): void {
+    this.liveMetrics = {};
     this.backgroundMode.enable();
     this.backgroundGeolocation.start();
   }
@@ -619,7 +617,6 @@ export class BackgroundTaskService {
       this.btWrite(actPoll, 1);
     }
   }
-
 
   btDisconnect() {
     // clearInterval(this.btIntervalWriter);
