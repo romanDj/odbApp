@@ -1,8 +1,8 @@
-import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
+import {ChangeDetectionStrategy, ChangeDetectorRef, Component, OnDestroy, OnInit, OnChanges} from '@angular/core';
 import {BackgroundTaskService} from '../services/background-task.service';
 import {ConfigOdb, ConfigOdbService} from '../services/config-odb.service';
-import {Subscription} from 'rxjs';
-import {take} from 'rxjs/operators';
+import {Subject, Subscription} from 'rxjs';
+import {take, takeUntil} from 'rxjs/operators';
 import {Platform} from '@ionic/angular';
 
 @Component({
@@ -13,13 +13,15 @@ import {Platform} from '@ionic/angular';
 export class Tab1Page implements OnInit, OnDestroy {
 
   subscription: Subscription;
-  resumeSubscription: Subscription;
   configOdb: ConfigOdb;
+
+  private destroyed$ = new Subject();
 
   constructor(
     private platform: Platform,
     private backgroundTaskService: BackgroundTaskService,
-    private configOdbService: ConfigOdbService) {
+    private configOdbService: ConfigOdbService,
+    private cdr: ChangeDetectorRef) {
   }
 
   ngOnInit() {
@@ -33,14 +35,23 @@ export class Tab1Page implements OnInit, OnDestroy {
   }
 
   ionViewDidEnter() {
-    this.resumeSubscription = this.platform.resume.subscribe(async () => {
+    this.platform.resume.pipe(
+      takeUntil(this.destroyed$)
+    ).subscribe(async () => {
       this.backgroundTaskService.updateStatus();
     });
+    this.backgroundTaskService.connStatus.pipe(
+      takeUntil(this.destroyed$)
+    ).subscribe(() => {
+      this.cdr.detectChanges();
+    });
+
     this.backgroundTaskService.updateStatus();
   }
 
   ionViewDidLeave() {
-    this.resumeSubscription.unsubscribe();
+    this.destroyed$.next();
+    this.destroyed$.complete();
   }
 
   statusClick(val) {

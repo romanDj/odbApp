@@ -27,7 +27,7 @@ import {
   filter,
   mergeMap,
   map,
-  first, scan, publish, share
+  first, scan, publish, share, retryWhen, delayWhen, delay
 } from 'rxjs/operators';
 import {BluetoothService} from './bluetooth.service';
 import {ConfigOdb, ConfigOdbService} from './config-odb.service';
@@ -75,7 +75,6 @@ export class BackgroundTaskService {
   // Bluetooth
   private connStatus$: BehaviorSubject<string> = new BehaviorSubject<string>('Отключено');
   connStatus = this.connStatus$.asObservable();
-  defaultBluetoothDev = '';
   lastConnectedToOBD;
   btIsConnecting = false;
   btConnected = false;
@@ -88,6 +87,7 @@ export class BackgroundTaskService {
   liveMetrics = {};
 
   odbMetrics = [];
+  configOdb;
 
   constructor(
     private backgroundMode: BackgroundMode,
@@ -116,6 +116,7 @@ export class BackgroundTaskService {
     this.lastConnectedToOBD = Date.now();
 
     this.configOdbService.configOdb.subscribe((config: ConfigOdb) => {
+      this.configOdb = config;
       this.odbMetrics = config.odbMetrics.map(metric => {
         const getPID = obdinfo.PIDS.find(p => p.name === metric);
         if (getPID && getPID.mode === obdinfo.modeRealTime && getPID.name !== '') {
@@ -156,7 +157,6 @@ export class BackgroundTaskService {
         )
       )
     ).subscribe();
-    // await this.initDB();
     this.subscribeToNetworkChanges();
     this.enableGPSTracking();
   }
@@ -175,26 +175,30 @@ export class BackgroundTaskService {
   enable(): void {
     this.liveMetrics = {};
     this.backgroundMode.enable();
-    this.backgroundGeolocation.start();
   }
 
   disable(): void {
     this.backgroundMode.disable();
-    this.backgroundGeolocation.stop();
-    this.bluetoothSerial.disconnect().then(() => {
-      this.connStatus$.next('Отключено');
-    });
   }
 
   onStart() {
     console.log('-- background mode enabled');
     this.backgroundMode.disableWebViewOptimizations();
-    this.statusTask$.next(true);
   }
 
   onStop() {
     console.log('-- background mode disabled');
+    this.queue = [];
     this.statusTask$.next(false);
+    this.btConnected = false;
+    this.btIsConnecting = false;
+    this.lastConnectedToOBD = Date.now();
+    this.removeAllPollers();
+    this.connStatus$.next('Ошибка');
+    this.backgroundGeolocation.stop();
+    this.bluetoothSerial.disconnect().then(() => {
+      this.connStatus$.next('Отключено');
+    });
   }
 
   updateStatus(val?: boolean): void {
@@ -258,8 +262,6 @@ export class BackgroundTaskService {
   enableGPSTracking(): void {
     this.backgroundGeolocation.checkStatus().then((status) => {
       console.log('[INFO] BackgroundGeolocation service is running', status.isRunning);
-      console.log('[INFO] BackgroundGeolocation services enabled', status.locationServicesEnabled);
-      console.log('[INFO] BackgroundGeolocation auth status: ' + status.authorization);
 
       if (!status.locationServicesEnabled) {
         return this.backgroundGeolocation.showLocationSettings();
@@ -272,7 +274,6 @@ export class BackgroundTaskService {
     this.backgroundGeolocation.configure(gpsConfig)
       .then(() => {
         this.backgroundGeolocation.on(BackgroundGeolocationEvents.location).subscribe((location: BackgroundGeolocationResponse) => {
-          console.log('[INFO] Location: ' + location.time + ', Lat: ' + location.latitude + ', Lon: ' + location.longitude);
           const objData = {
             name: 'location',
             value: JSON.stringify({latitude: location.latitude, longitude: location.longitude})
@@ -291,44 +292,30 @@ export class BackgroundTaskService {
   // Bluetooth
 
   checkBluetoothEnabled(): Observable<any> {
-    return of(
-      from(this.bluetoothSerial.isEnabled()).pipe(mapTo(null)),
-      this.configOdbService.configOdb.pipe(
-        take(1),
-        switchMap((config: ConfigOdb) => defer(() => {
-          if (config.bluetoothDeviceToUse.address === undefined ||
-            config.bluetoothDeviceToUse.address === null ||
-            config.bluetoothDeviceToUse.address.length === 0) {
-            throw new Error('Device no selected');
-          }
-          this.connStatus$.next('Подключено');
-          this.btIsConnecting = true;
-          return this.connectBluetooth(
-            config.bluetoothDeviceToUse.address,
-            config.bluetoothDeviceToUse.name
-          );
-        }))
-      )
-    ).pipe(
-      concatAll(),
-      filter(x => x != null)
+    return from(this.bluetoothSerial.isEnabled()).pipe(
+      switchMap(() => defer(() => {
+        if (this.configOdb.bluetoothDeviceToUse.address === undefined ||
+          this.configOdb.bluetoothDeviceToUse.address === null ||
+          this.configOdb.bluetoothDeviceToUse.address.length === 0) {
+          throw new Error('Device no selected');
+        }
+        return this.connectBluetooth(
+          this.configOdb.bluetoothDeviceToUse.address,
+          this.configOdb.bluetoothDeviceToUse.name
+        );
+      }))
     );
   }
 
   connectBluetooth(address, name): Observable<any> {
+    this.connStatus$.next('Соединение...');
+    this.btIsConnecting = true;
+
     return this.bluetoothSerial.connect(address).pipe(
       tap((val) => {
-        console.log('connected');
-        this.btConnected = true;
-        this.btIsConnecting = false;
-        this.connStatus$.next('Подключено');
-        this.defaultBluetoothDev = name;
+        this.btConnect();
       }),
       catchError((err) => {
-        this.connStatus$.next('Ошибка');
-        this.btIsConnecting = false;
-        this.btConnected = false;
-        this.btDisconnect();
         return throwError(err);
       }),
       mergeMap(() => this.deviceConnected())
@@ -337,7 +324,6 @@ export class BackgroundTaskService {
 
   deviceConnected(): Observable<any> {
     this.lastConnectedToOBD = Date.now();
-    // this.backgroundGeolocation.start()
     this.initCommunication();
 
     return merge(
@@ -552,8 +538,7 @@ export class BackgroundTaskService {
       return merge(
         // интервал отправляет периодически данные в очередь
         interval(pollingInterval).pipe(
-          tap(() => this.writePollers.bind(this)()),
-          takeUntil(this.backgroundMode.on('disable'))
+          tap(() => this.writePollers.bind(this)())
         ),
         // интервал отправляет периодически данные на устройство из очереди
         this.enableIntervalWriter()
@@ -584,8 +569,7 @@ export class BackgroundTaskService {
         this.btEventEmit('error', 'OBD-II Listeners deactivated, connection is probably lost.');
         this.removeAllPollers();
         return empty();
-      }),
-      takeUntil(this.backgroundMode.on('disable'))
+      })
     );
   }
 
@@ -605,12 +589,6 @@ export class BackgroundTaskService {
     this.activePollers.push(stringToSend);
   }
 
-  removePoller(name) {
-    const stringToDelete = this.getPIDByName(name);
-    const index = this.activePollers.indexOf(stringToDelete);
-    this.activePollers.splice(index, 1);
-  }
-
   removeAllPollers() {
     this.activePollers = [];
   }
@@ -621,14 +599,13 @@ export class BackgroundTaskService {
     }
   }
 
-  btDisconnect() {
-    // clearInterval(this.btIntervalWriter);
+  btConnect(){
+    console.log('connected');
     this.queue = [];
-    this.btConnected = false;
+    this.statusTask$.next(true);
+    this.btConnected = true;
     this.btIsConnecting = false;
-    console.log('[INFO] Disconnected');
-    this.lastConnectedToOBD = Date.now();
-    // this.backgroundGeolocation.stop();
+    this.backgroundGeolocation.start();
+    this.connStatus$.next('Подключено');
   }
-
 }

@@ -73,7 +73,6 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    console.log('ngOnDestory - Home Page');
   }
 
   initializeApp() {
@@ -84,8 +83,6 @@ export class AppComponent implements OnInit, OnDestroy {
       await this.liveMetricsService.init();
       await this.bluetoothService.init();
       await this.backgroundTaskService.init();
-      // this.backgroundMode.on('activate').subscribe(() => this.startWatchData());
-      // this.backgroundMode.on('deactivate').subscribe(() => this.backgroundTask());
     });
   }
 

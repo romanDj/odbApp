@@ -2,6 +2,8 @@ import {Component} from '@angular/core';
 import {LiveMetricsService} from '../services/live-metrics.service';
 import * as moment from 'moment';
 import {obdinfo} from '../utils/obdInfo.js';
+import {Subscription} from 'rxjs';
+import {Platform} from '@ionic/angular';
 
 @Component({
   selector: 'app-tab3',
@@ -10,19 +12,24 @@ import {obdinfo} from '../utils/obdInfo.js';
 })
 export class Tab3Page {
 
+  resumeSubscription: Subscription;
   liveMetrics: any = [];
 
   constructor(
+    private platform: Platform,
     private liveMetricsService: LiveMetricsService
   ) {
   }
 
   ionViewDidEnter() {
+    this.resumeSubscription = this.platform.resume.subscribe(async () => {
+      this.loadData();
+    });
     this.loadData();
   }
 
   ionViewDidLeave() {
-
+    this.resumeSubscription.unsubscribe();
   }
 
   loadData() {
@@ -32,16 +39,16 @@ export class Tab3Page {
         let value = x.value,
           description = '',
           unit = '';
-        if (x.name === 'location'){
-          try{
+        if (x.name === 'location') {
+          try {
             value = JSON.parse(x.value);
-          }catch (e) {
+          } catch (e) {
             console.log('[ERR] Parse ' + JSON.stringify(e));
           }
           description = x.name;
-        }else{
+        } else {
           const findItem = obdinfo.PIDS.find(pid => pid.name === x.name);
-          if (findItem){
+          if (findItem) {
             description = findItem.description || '';
             unit = findItem.unit || '';
           }
@@ -54,7 +61,7 @@ export class Tab3Page {
           ts: moment(x.ts).format('YYYY-MM-DD HH:mm:ss')
         };
       });
-      console.log(this.liveMetrics);
+      // console.log(this.liveMetrics);
     });
   }
 }

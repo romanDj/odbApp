@@ -18,12 +18,12 @@
       <ion-button slot="end"
                   *ngIf="!status"
                   (click)="statusClick(status)"
-                  size="small">Вкл.
+                  size="small" [disabled]="backgroundTaskService.btIsConnecting">Вкл.
       </ion-button>
       <ion-button slot="end"
                   *ngIf="status"
                   (click)="statusClick(status)"
-                  size="small" color="danger">Выкл.
+                  size="small" color="danger" [disabled]="backgroundTaskService.btIsConnecting">Выкл.
       </ion-button>
     </ng-template>
 

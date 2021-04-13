@@ -30,7 +30,6 @@ export class BluetoothService {
     return await new Promise((resolve, reject) => {
       this.bluetoothSerial.isEnabled().then(success => {
         resolve();
-        // this.listPairedDevices();
       }, error => {
         reject();
         this.showError('Пожалуйста включите Bluetooth');
