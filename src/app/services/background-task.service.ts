@@ -88,6 +88,7 @@ export class BackgroundTaskService {
 
   odbMetrics = [];
   configOdb;
+  uploadingData = false;
 
   constructor(
     private backgroundMode: BackgroundMode,
@@ -137,10 +138,19 @@ export class BackgroundTaskService {
       switchMap(() =>
         defer(() => {
           this.onStart();
-          return this.checkBluetoothEnabled().pipe(
+          return merge(
+            this.checkBluetoothEnabled(),
+            this.uploadData()
+          ).pipe(
             finalize(() => this.onStop()),
-            takeUntil(this.backgroundMode.on('disable'))
+            takeUntil(this.backgroundMode.on('disable').pipe(
+              tap(() => this.onStop())
+            ))
           );
+          // return this.checkBluetoothEnabled().pipe(
+          //   finalize(() => this.onStop()),
+          //   takeUntil(this.backgroundMode.on('disable'))
+          // );
           // return timer(0, 10000).pipe(
           //   concatMap((n) => this.task()),
           //   finalize(() => this.onStop()),
@@ -150,14 +160,12 @@ export class BackgroundTaskService {
           catchError((err) => {
             this.showError(err);
             console.log('[error] ' + err);
-            this.onStop();
             this.disable();
             return empty();
           }),
         )
       )
     ).subscribe();
-    this.subscribeToNetworkChanges();
     this.enableGPSTracking();
   }
 
@@ -179,6 +187,7 @@ export class BackgroundTaskService {
 
   disable(): void {
     this.backgroundMode.disable();
+    this.backgroundGeolocation.stop();
   }
 
   onStart() {
@@ -195,7 +204,6 @@ export class BackgroundTaskService {
     this.lastConnectedToOBD = Date.now();
     this.removeAllPollers();
     this.connStatus$.next('Ошибка');
-    this.backgroundGeolocation.stop();
     this.bluetoothSerial.disconnect().then(() => {
       this.connStatus$.next('Отключено');
     });
@@ -214,47 +222,29 @@ export class BackgroundTaskService {
     }
   }
 
-  task(): Observable<any> {
+  uploadData(): Observable<any> {
+    return timer(0, 15000).pipe(
+      concatMap((n) => defer(() => {
+        return this.checkNetwork() && this.uploadingData === false ? this.uploadTask() : empty();
+      }))
+    );
+  }
+
+  uploadTask(): Observable<any> {
+    this.uploadingData = true;
     const today: Date = new Date();
-    console.log('task run watch  | ' + `${today.getHours()}:${today.getMinutes()}:${today.getSeconds()}`);
 
-    return of([]);
-
-    // return this.checkBluetoothEnabled();
-
-    // Upload data if there is wifi and not send to csv
-    // if (!this.btConnected && this.isNetworkConnectivity) {
-    //   if (this.uploadingData) {
-    //     console.log('[INFO] Wifi detected, attempting to upload data but still uploading previous cycle, retrying in 20 seconds...');
-    //     return;
-    //   }
-    //   this.uploadData();
-    // }
-    // Upload data if is sending to
-    // if (this.globalconfig.dataUpload.mode == 'CSV' && this.liveStatsNumRecordsToSend > 0) {
-    //   if (this.uploadingData) {
-    //     console.log('[INFO] Attempting to save to csv but still uploading previous cycle, retrying in 20 seconds...');
-    //     return;
-    //   }
-    //   this.uploadData();
-    // }
+    return from(this.liveMetricsService.sendData()).pipe(
+      tap(() => console.log('task uploadData  | ' + `${today.getHours()}:${today.getMinutes()}:${today.getSeconds()}`)),
+      finalize(() => this.uploadingData = false),
+      catchError(() => empty())
+    );
   }
 
   // Network
 
-  subscribeToNetworkChanges() {
-    const offlineStatuses = [`unknown`, `cellular`, `none`];
-    if (!offlineStatuses.includes(this.network.type)) {
-      this.isNetworkConnectivity = true;
-    }
-
-    const universalStream = merge(
-      this.network.onDisconnect().pipe(mapTo(false)),
-      this.network.onConnect().pipe(mapTo(true))
-    );
-    universalStream.subscribe((val) => {
-      this.isNetworkConnectivity = val;
-    });
+  checkNetwork() {
+    return ![`unknown`, `cellular`, `none`].includes(this.network.type);
   }
 
   // GPS
@@ -413,7 +403,8 @@ export class BackgroundTaskService {
         this.liveMetrics[pdata.name].type = 's';
       }
     } else {  // location data
-      if (this.liveMetrics['latitude'] == undefined) {
+      /* tslint:disable:no-string-literal */
+      if (this.liveMetrics['latitude'] === undefined) {
         this.liveMetrics['latitude'] = {};
         this.liveMetrics['latitude'].description = 'Location: latitude';
         this.liveMetrics['latitude'].name = '';
@@ -421,7 +412,7 @@ export class BackgroundTaskService {
         this.liveMetrics['latitude'].type = '';
       }
       this.liveMetrics['latitude'].value = JSON.parse(pdata.value).latitude;
-      if (this.liveMetrics['longitude'] == undefined) {
+      if (this.liveMetrics['longitude'] === undefined) {
         this.liveMetrics['longitude'] = {};
         this.liveMetrics['longitude'].description = 'Location: longitude';
         this.liveMetrics['longitude'].name = '';
@@ -599,7 +590,7 @@ export class BackgroundTaskService {
     }
   }
 
-  btConnect(){
+  btConnect() {
     console.log('connected');
     this.queue = [];
     this.statusTask$.next(true);

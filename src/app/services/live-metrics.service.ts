@@ -1,5 +1,6 @@
 import {Injectable} from '@angular/core';
 import {SQLite, SQLiteObject} from '@ionic-native/sqlite/ngx';
+import {HTTP} from '@ionic-native/http/ngx';
 
 
 @Injectable({
@@ -9,7 +10,7 @@ export class LiveMetricsService {
 
   private database: SQLiteObject;
 
-  constructor(private sqlite: SQLite) {
+  constructor(private sqlite: SQLite, private http: HTTP) {
   }
 
   init() {
@@ -48,10 +49,10 @@ export class LiveMetricsService {
     });
   }
 
-  getHistory() {
+  getRows(query: string, params: Array<any> = []) {
     return new Promise((resolve, reject) => {
       this.database.transaction(tx => {
-        tx.executeSql('SELECT  * FROM liveMetric ORDER BY ts DESC LIMIT 1000;', [], (_, {rows}) => {
+        tx.executeSql(query, params, (_, {rows}) => {
           console.log('[INFO] Records found to send: ' + rows.length);
           const data = [];
           for (let i = 0; i < rows.length; i++) {
@@ -64,4 +65,50 @@ export class LiveMetricsService {
       });
     });
   }
+
+  getHistory() {
+    return this.getRows('SELECT  * FROM liveMetric ORDER BY ts DESC LIMIT 1000');
+  }
+
+  getRecordsNoSync() {
+    return this.getRows('SELECT  * FROM liveMetric WHERE isSend=0 ORDER BY ts ASC LIMIT 1000;');
+  }
+
+  setIsSync(ids) {
+    return new Promise((resolve, reject) => {
+      this.database.executeSql(
+        `UPDATE liveMetric SET isSend = 1 WHERE rowid IN (${ids.join(', ')})`,
+        []).then(() => {
+        resolve();
+      }).catch((err) => {
+        console.log('[ERROR] ' + err.message);
+        reject();
+      });
+    });
+  }
+
+  sendData() {
+    return new Promise(async (resolve, reject) => {
+      const records: any = await this.getRecordsNoSync();
+      if (records.length > 0) {
+        const url = 'http://localhost/odbmetrics';
+        const headers = {
+          'Content-Type': 'application/json'
+        };
+
+        try{
+          const response = await this.http.post(url, {liveMetrics: records}, headers);
+          console.log(response);
+          await this.setIsSync(response.data);
+          resolve();
+        }catch (err) {
+          console.log('[INFO] HTTP Error: ' + JSON.stringify(err));
+          reject();
+        }
+      }
+      resolve();
+    });
+  }
+
+
 }
