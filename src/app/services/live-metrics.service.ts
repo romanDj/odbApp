@@ -1,6 +1,7 @@
 import {Injectable} from '@angular/core';
 import {SQLite, SQLiteObject} from '@ionic-native/sqlite/ngx';
 import {HTTP} from '@ionic-native/http/ngx';
+import {environment} from '../../environments/environment';
 
 
 @Injectable({
@@ -89,19 +90,26 @@ export class LiveMetricsService {
 
   sendData() {
     return new Promise(async (resolve, reject) => {
-      const records: any = await this.getRecordsNoSync();
+      let records: any = await this.getRecordsNoSync();
       if (records.length > 0) {
-        const url = 'http://localhost/odbmetrics';
+        const url = environment.apiUrl + '/livemetrics';
         const headers = {
           'Content-Type': 'application/json'
         };
 
-        try{
-          const response = await this.http.post(url, {liveMetrics: records}, headers);
-          console.log(response);
+        try {
+          await this.http.setServerTrustMode('nocheck');
+          this.http.setDataSerializer('json');
+
+          records = records.map(({rowid, ts, name, value}) => ({rowid, ts, name, value}));
+          const response = await this.http.post(
+            url,
+            {liveMetrics: records},
+            headers);
+          console.log(response.data);
           await this.setIsSync(response.data);
           resolve();
-        }catch (err) {
+        } catch (err) {
           console.log('[INFO] HTTP Error: ' + JSON.stringify(err));
           reject();
         }
