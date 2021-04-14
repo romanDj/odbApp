@@ -106,8 +106,8 @@ export class LiveMetricsService {
             url,
             {liveMetrics: records},
             headers);
-          console.log(response.data);
-          await this.setIsSync(response.data);
+          const data = JSON.parse(response.data);
+          await this.setIsSync(data);
           resolve();
         } catch (err) {
           console.log('[INFO] HTTP Error: ' + JSON.stringify(err));

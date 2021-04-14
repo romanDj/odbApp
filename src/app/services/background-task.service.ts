@@ -223,7 +223,7 @@ export class BackgroundTaskService {
   }
 
   uploadData(): Observable<any> {
-    return timer(0, 15000).pipe(
+    return timer(0, 20000).pipe(
       concatMap((n) => defer(() => {
         return this.checkNetwork() && this.uploadingData === false ? this.uploadTask() : empty();
       }))
