@@ -77,7 +77,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
   initializeApp() {
     this.platform.ready().then(async () => {
-      // this.statusBar.styleDefault();
       this.splashScreen.hide();
       await this.configOdbService.init();
       await this.liveMetricsService.init();

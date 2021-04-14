@@ -13,7 +13,21 @@ import {Network, Connection} from '@ionic-native/network/ngx';
 import {HTTP} from '@ionic-native/http/ngx';
 import {BluetoothSerial} from '@ionic-native/bluetooth-serial/ngx';
 
-import {BehaviorSubject, defer, interval, Observable, Subscription, forkJoin, merge, timer, of, empty, from, throwError} from 'rxjs';
+import {
+  BehaviorSubject,
+  defer,
+  interval,
+  Observable,
+  Subscription,
+  forkJoin,
+  merge,
+  timer,
+  of,
+  empty,
+  from,
+  throwError,
+  concat
+} from 'rxjs';
 import {
   catchError,
   finalize,
@@ -70,7 +84,6 @@ export class BackgroundTaskService {
 
   private statusTask$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   readonly statusTask = this.statusTask$.asObservable();
-  isNetworkConnectivity = false;
 
   // Bluetooth
   private connStatus$: BehaviorSubject<string> = new BehaviorSubject<string>('Отключено');
@@ -139,7 +152,7 @@ export class BackgroundTaskService {
         defer(() => {
           this.onStart();
           return merge(
-            this.checkBluetoothEnabled(),
+            this.checkBluetoothAndGpsEnabled(),
             this.uploadData()
           ).pipe(
             finalize(() => this.onStop()),
@@ -281,9 +294,22 @@ export class BackgroundTaskService {
 
   // Bluetooth
 
-  checkBluetoothEnabled(): Observable<any> {
-    return from(this.bluetoothSerial.isEnabled()).pipe(
-      switchMap(() => defer(() => {
+  checkBluetoothAndGpsEnabled(): Observable<any> {
+    return forkJoin({
+      bt: from(this.bluetoothSerial.isEnabled()),
+      gps: from(this.backgroundGeolocation.checkStatus())
+  }).pipe(
+      switchMap((val) => defer(() => {
+
+        if (!val.gps.locationServicesEnabled) {
+          this.backgroundGeolocation.showLocationSettings();
+          throw new Error('Gps need enabled');
+        }
+        if (val.gps.authorization === BackgroundGeolocationAuthorizationStatus.NOT_AUTHORIZED) {
+          this.backgroundGeolocation.showAppSettings();
+          throw new Error('Gps need enabled');
+        }
+
         if (this.configOdb.bluetoothDeviceToUse.address === undefined ||
           this.configOdb.bluetoothDeviceToUse.address === null ||
           this.configOdb.bluetoothDeviceToUse.address.length === 0) {

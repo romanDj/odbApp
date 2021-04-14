@@ -2,6 +2,7 @@ import {Injectable} from '@angular/core';
 import {SQLite, SQLiteObject} from '@ionic-native/sqlite/ngx';
 import {HTTP} from '@ionic-native/http/ngx';
 import {environment} from '../../environments/environment';
+import {BehaviorSubject} from 'rxjs';
 
 
 @Injectable({
@@ -10,6 +11,12 @@ import {environment} from '../../environments/environment';
 export class LiveMetricsService {
 
   private database: SQLiteObject;
+
+  private isLoadRows$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  readonly isLoadRows = this.isLoadRows$.asObservable();
+
+  private isSend$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
+  readonly isSend = this.isSend$.asObservable();
 
   constructor(private sqlite: SQLite, private http: HTTP) {
   }
@@ -68,11 +75,18 @@ export class LiveMetricsService {
   }
 
   getHistory() {
-    return this.getRows('SELECT  * FROM liveMetric ORDER BY ts DESC LIMIT 1000');
+    this.isLoadRows$.next(true);
+    return this.getRows('SELECT  * FROM liveMetric ORDER BY ts DESC LIMIT 500').finally(() => {
+      this.isLoadRows$.next(false);
+    });
   }
 
   getRecordsNoSync() {
     return this.getRows('SELECT  * FROM liveMetric WHERE isSend=0 ORDER BY ts ASC LIMIT 1000;');
+  }
+
+  getRecordsNoSyncAll() {
+    return this.getRows('SELECT  * FROM liveMetric WHERE isSend=0 ORDER BY ts ASC');
   }
 
   setIsSync(ids) {
@@ -90,8 +104,25 @@ export class LiveMetricsService {
 
   sendData() {
     return new Promise(async (resolve, reject) => {
-      let records: any = await this.getRecordsNoSync();
-      if (records.length > 0) {
+      const records: any = await this.getRecordsNoSync();
+      await this.sendDataInServer(records);
+      resolve();
+    });
+  }
+
+  sendDataRecursion() {
+    this.isSend$.next(true);
+    return new Promise(async (resolve, reject) => {
+      const records: any = await this.getRecordsNoSyncAll();
+      await this.sendDataInServer(records);
+      this.isSend$.next(false);
+      resolve();
+    });
+  }
+
+  sendDataInServer(rows){
+    return new Promise(async (resolve, reject) => {
+      if (rows.length > 0) {
         const url = environment.apiUrl + '/livemetrics';
         const headers = {
           'Content-Type': 'application/json'
@@ -101,7 +132,7 @@ export class LiveMetricsService {
           await this.http.setServerTrustMode('nocheck');
           this.http.setDataSerializer('json');
 
-          records = records.map(({rowid, ts, name, value}) => ({rowid, ts, name, value}));
+          const records = rows.map(({rowid, ts, name, value}) => ({rowid, ts, name, value}));
           const response = await this.http.post(
             url,
             {liveMetrics: records},
@@ -118,5 +149,8 @@ export class LiveMetricsService {
     });
   }
 
+  clearTreeDayData() {
+
+  }
 
 }

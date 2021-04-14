@@ -1,9 +1,11 @@
-import {Component} from '@angular/core';
+import {Component, ViewChild} from '@angular/core';
 import {LiveMetricsService} from '../services/live-metrics.service';
 import * as moment from 'moment';
 import {obdinfo} from '../utils/obdInfo.js';
 import {Subscription} from 'rxjs';
 import {Platform} from '@ionic/angular';
+import {BackgroundTaskService} from '../services/background-task.service';
+import { IonContent } from '@ionic/angular';
 
 @Component({
   selector: 'app-tab3',
@@ -12,12 +14,15 @@ import {Platform} from '@ionic/angular';
 })
 export class Tab3Page {
 
+  @ViewChild(IonContent) content: IonContent;
   resumeSubscription: Subscription;
   liveMetrics: any = [];
+  needSync = false;
 
   constructor(
     private platform: Platform,
-    private liveMetricsService: LiveMetricsService
+    private liveMetricsService: LiveMetricsService,
+    private backgroundTaskService: BackgroundTaskService
   ) {
   }
 
@@ -33,12 +38,17 @@ export class Tab3Page {
   }
 
   loadData() {
+    this.content.scrollToTop();
+    this.needSync = false;
     this.liveMetricsService.getHistory().then((data: any[]) => {
       this.liveMetrics = data.map(x => {
         // tslint:disable-next-line:one-variable-per-declaration
         let value = x.value,
           description = '',
           unit = '';
+        if (x.isSend === 0){
+          this.needSync = true;
+        }
         if (x.name === 'location') {
           try {
             value = JSON.parse(x.value);
@@ -61,7 +71,13 @@ export class Tab3Page {
           ts: moment(x.ts).format('YYYY-MM-DD HH:mm:ss')
         };
       });
-      // console.log(this.liveMetrics);
     });
   }
+
+  synchronization(){
+    this.liveMetricsService.sendDataRecursion().then(() => {
+      this.loadData();
+    });
+  }
+
 }
