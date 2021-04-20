@@ -4,7 +4,8 @@
 
 export const environment = {
   production: false,
-  apiUrl: 'https://192.168.1.62:5000/gasDiesel/api'
+  apiUrl: 'https://192.168.1.62:5000/gasDiesel/api',
+  identityUrl: 'https://192.168.1.62:5000/identityServer'
 };
 
 /*

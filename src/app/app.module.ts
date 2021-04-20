@@ -18,18 +18,26 @@ import {
 import {File} from '@ionic-native/file/ngx';
 
 import {IonicModule, IonicRouteStrategy, IonRouterOutlet, Platform} from '@ionic/angular';
-import {IonicStorageModule} from '@ionic/storage';
+import {IonicStorageModule} from '@ionic/storage-angular';
 
 import {AppRoutingModule} from './app-routing.module';
 import {AppComponent} from './app.component';
 import {BackgroundMode} from '@ionic-native/background-mode/ngx';
 import {BackgroundTaskService} from './services/background-task.service';
+import {FormsModule, ReactiveFormsModule} from '@angular/forms';
+import * as CordovaSQLiteDriver from 'localforage-cordovasqlitedriver';
 
 
 @NgModule({
   declarations: [AppComponent],
   entryComponents: [],
-  imports: [BrowserModule, IonicModule.forRoot(), AppRoutingModule, IonicStorageModule.forRoot()],
+  imports: [
+    BrowserModule,
+    IonicModule.forRoot(),
+    AppRoutingModule,
+    ReactiveFormsModule,
+    FormsModule,
+    IonicStorageModule.forRoot()],
   providers: [
     Platform,
     StatusBar,

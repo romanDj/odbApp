@@ -30,6 +30,7 @@ import {BackgroundTaskService} from './services/background-task.service';
 import {ConfigOdbService} from './services/config-odb.service';
 import {BluetoothService} from './services/bluetooth.service';
 import {LiveMetricsService} from './services/live-metrics.service';
+import {AuthService} from './services/auth.service';
 
 const gpsConfig: BackgroundGeolocationConfig = {
   desiredAccuracy: 10,
@@ -64,7 +65,8 @@ export class AppComponent implements OnInit, OnDestroy {
     private backgroundTaskService: BackgroundTaskService,
     private configOdbService: ConfigOdbService,
     private bluetoothService: BluetoothService,
-    private liveMetricsService: LiveMetricsService
+    private liveMetricsService: LiveMetricsService,
+    private authService: AuthService
   ) {
   }
 
@@ -79,6 +81,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.platform.ready().then(async () => {
       this.splashScreen.hide();
       await this.configOdbService.init();
+      await this.authService.init();
       await this.liveMetricsService.init();
       await this.bluetoothService.init();
       await this.backgroundTaskService.init();

@@ -51,12 +51,16 @@ import * as _ from 'underscore';
 import {rejects} from 'assert';
 import {SQLite, SQLiteObject} from '@ionic-native/sqlite/ngx';
 import {LiveMetricsService} from './live-metrics.service';
+import {AuthService} from './auth.service';
 
 
 const gpsConfig: BackgroundGeolocationConfig = {
   desiredAccuracy: 10,
   stationaryRadius: 20,
-  distanceFilter: 30,
+  distanceFilter: 5,
+  interval: 10000,
+  fastestInterval: 5000,
+  activitiesInterval: 10000,
   startForeground: true,
   notificationsEnabled: false,
   debug: false,
@@ -67,14 +71,7 @@ const gpsConfig: BackgroundGeolocationConfig = {
 
 /**
  * Выполнятся каждые 20 секунд
- * При подключении -> сбрасывается таймер, начинатся попытка подключиться к устройству OBD каждые 20 сек
  * При подключении к OBD собирайте метрики в режиме реального времени
- * 0-5 минут потеря связи с устройствами OBD -> повторите попытку подключения через 20 секунд, не спите
- *  тем временем, если доступна сеть Wi-Fi, загрузите данные
- *  Через 5 минут после потери связи с устройством OBD,
- *    если он не подключен к источнику питания (если данные не отправляются) -> выйти из приложения, разрешить глубокий сон
- *  Через 10 минут после потери связи с устройством OBD,
- *    если он не подключен к источнику питания (даже отправка данных) -> выйти из приложения, разрешить глубокий сон
  */
 
 @Injectable({
@@ -115,7 +112,8 @@ export class BackgroundTaskService {
     private bluetoothService: BluetoothService,
     private configOdbService: ConfigOdbService,
     private sqlite: SQLite,
-    private liveMetricsService: LiveMetricsService) {
+    private liveMetricsService: LiveMetricsService,
+    private authService: AuthService) {
   }
 
   async init() {
@@ -238,7 +236,10 @@ export class BackgroundTaskService {
   uploadData(): Observable<any> {
     return timer(0, 20000).pipe(
       concatMap((n) => defer(() => {
-        return this.checkNetwork() && this.uploadingData === false ? this.uploadTask() : empty();
+        return this.checkNetwork()
+        && this.uploadingData === false
+        && this.authService.authUser$.getValue() != null
+          ? this.uploadTask() : empty();
       }))
     );
   }
@@ -298,7 +299,7 @@ export class BackgroundTaskService {
     return forkJoin({
       bt: from(this.bluetoothSerial.isEnabled()),
       gps: from(this.backgroundGeolocation.checkStatus())
-  }).pipe(
+    }).pipe(
       switchMap((val) => defer(() => {
 
         if (!val.gps.locationServicesEnabled) {

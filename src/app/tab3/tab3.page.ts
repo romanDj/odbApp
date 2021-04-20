@@ -26,7 +26,7 @@ export class Tab3Page {
   ) {
   }
 
-  ionViewDidEnter() {
+  async ionViewDidEnter() {
     this.resumeSubscription = this.platform.resume.subscribe(async () => {
       this.loadData();
     });

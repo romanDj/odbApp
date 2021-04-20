@@ -1,0 +1,39 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>
+      Профиль
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="ion-padding">
+
+  <ng-container *ngTemplateOutlet="appTpl;
+        context: {
+          authUser: authService.authUser | async
+        }"></ng-container>
+  <ng-template #appTpl let-authUser="authUser">
+    <section *ngIf="authUser == null; else profileTpl">
+      <form [formGroup]="loginForm">
+        <ion-item style="margin-bottom: 20px; display: block">
+          <ion-label position="stacked">Имя пользователя:</ion-label>
+          <ion-input formControlName="username"  type="text"></ion-input>
+        </ion-item>
+        <ion-item style="margin-bottom: 20px; display: block">
+          <ion-label position="stacked">Пароль:</ion-label>
+          <ion-input formControlName="password" type="password"></ion-input>
+        </ion-item>
+        <ion-button [disabled]="!loginForm.valid || isSending" (click)="login()" expand="block">Войти</ion-button>
+      </form>
+    </section>
+
+    <ng-template #profileTpl>
+      <section>
+        <ion-label style="display: block; margin-bottom: 30px; margin-top: 15px">Пользователь: {{authUser.name}}</ion-label>
+        <ion-button (click)="authService.logout()"  expand="block" color="danger">Выйти</ion-button>
+      </section>
+    </ng-template>
+  </ng-template>
+
+
+</ion-content>

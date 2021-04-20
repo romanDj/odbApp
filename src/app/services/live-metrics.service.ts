@@ -3,6 +3,7 @@ import {SQLite, SQLiteObject} from '@ionic-native/sqlite/ngx';
 import {HTTP} from '@ionic-native/http/ngx';
 import {environment} from '../../environments/environment';
 import {BehaviorSubject} from 'rxjs';
+import {AuthService} from './auth.service';
 
 
 @Injectable({
@@ -18,7 +19,11 @@ export class LiveMetricsService {
   private isSend$: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   readonly isSend = this.isSend$.asObservable();
 
-  constructor(private sqlite: SQLite, private http: HTTP) {
+
+  constructor(
+    private sqlite: SQLite,
+    private http: HTTP,
+    private authService: AuthService) {
   }
 
   init() {
@@ -120,12 +125,14 @@ export class LiveMetricsService {
     });
   }
 
-  sendDataInServer(rows){
+  sendDataInServer(rows) {
     return new Promise(async (resolve, reject) => {
-      if (rows.length > 0) {
+      const user = this.authService.authUser$.getValue();
+      if (rows.length > 0 && user != null) {
         const url = environment.apiUrl + '/livemetrics';
         const headers = {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + user.accessToken
         };
 
         try {
