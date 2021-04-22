@@ -1,9 +1,12 @@
 import {Injectable} from '@angular/core';
 import {SQLite, SQLiteObject} from '@ionic-native/sqlite/ngx';
-import {HTTP} from '@ionic-native/http/ngx';
+import {HTTP, HTTPResponse} from '@ionic-native/http/ngx';
 import {environment} from '../../environments/environment';
-import {BehaviorSubject} from 'rxjs';
+import {BehaviorSubject, empty, from, Observable, of, throwError} from 'rxjs';
 import {UserStoreService} from './user-store.service';
+import {HttpSendOptions, HttpService} from './api/http.service';
+import {catchError, concatMap, finalize, switchMap, tap} from 'rxjs/operators';
+import {ToastController} from '@ionic/angular';
 
 
 @Injectable({
@@ -23,7 +26,9 @@ export class LiveMetricsService {
   constructor(
     private sqlite: SQLite,
     private http: HTTP,
-    private userStoreService: UserStoreService) {
+    private userStoreService: UserStoreService,
+    private httpService: HttpService,
+    public toastController: ToastController) {
   }
 
   init() {
@@ -107,57 +112,63 @@ export class LiveMetricsService {
     });
   }
 
-  sendData() {
-    return new Promise(async (resolve, reject) => {
-      const records: any = await this.getRecordsNoSync();
-      await this.sendDataInServer(records);
-      resolve();
-    });
+  sendData(): Observable<any> {
+    return from(this.getRecordsNoSync())
+      .pipe(
+        switchMap((rows: any) => rows?.length > 0
+          ? this.sendDataInServerObs(rows)
+          : empty()
+        ),
+        catchError((error) => throwError(error))
+      );
   }
 
-  sendDataRecursion() {
+  sendDataRecursion(): Observable<any> {
     this.isSend$.next(true);
-    return new Promise(async (resolve, reject) => {
-      const records: any = await this.getRecordsNoSyncAll();
-      await this.sendDataInServer(records);
-      this.isSend$.next(false);
-      resolve();
-    });
+
+    return from(this.getRecordsNoSyncAll())
+      .pipe(
+        switchMap((rows: any) => rows?.length > 0
+          ? this.sendDataInServerObs(rows)
+          : empty()
+        ),
+        catchError((error) =>
+          from(this.presentToast(JSON.stringify(error)))),
+        finalize(() => this.isSend$.next(false))
+      );
   }
 
-  sendDataInServer(rows) {
-    return new Promise(async (resolve, reject) => {
-      const user = this.userStoreService.user$.getValue();
-      if (rows.length > 0 && user != null) {
-        const url = environment.apiUrl + '/livemetrics';
-        const headers = {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + user.accessToken
-        };
-
-        try {
-          await this.http.setServerTrustMode('nocheck');
-          this.http.setDataSerializer('json');
-
-          const records = rows.map(({rowid, ts, name, value}) => ({rowid, ts, name, value}));
-          const response = await this.http.post(
-            url,
-            {liveMetrics: records},
-            headers);
-          const data = JSON.parse(response.data);
-          await this.setIsSync(data);
-          resolve();
-        } catch (err) {
-          console.log('[INFO] HTTP Error: ' + JSON.stringify(err));
-          reject();
-        }
-      }
-      resolve();
-    });
+  sendDataInServerObs(rows): Observable<any> {
+    const url = environment.apiUrl + '/livemetrics';
+    const options = new HttpSendOptions();
+    const records = rows.map(({rowid, ts, name, value}) => ({rowid, ts, name, value}));
+    options.data = {
+      liveMetrics: records
+    };
+    options.method = 'post';
+    return this.httpService.send(url, options)
+      .pipe(
+        tap((val) => console.log('[API SEND METRICS] ' + JSON.stringify(val))),
+        switchMap((response: HTTPResponse) =>
+          from(this.setIsSync(response.data))
+        ),
+        catchError((error) => {
+          console.log('[API SEND METRICS] Error: ' + JSON.stringify(error));
+          return throwError(error);
+        })
+      );
   }
 
   clearTreeDayData() {
 
+  }
+
+  async presentToast(message: string) {
+    const toast = await this.toastController.create({
+      message,
+      duration: 2000
+    });
+    await toast.present();
   }
 
 }

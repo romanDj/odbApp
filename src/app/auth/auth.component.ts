@@ -1,6 +1,5 @@
 import {Component, OnInit} from '@angular/core';
 import {FormGroup, FormControl, FormBuilder, Validators} from '@angular/forms';
-import {AuthService} from '../services/auth.service';
 import {AlertController} from '@ionic/angular';
 import {UserStoreService} from '../services/user-store.service';
 import {HttpService} from '../services/api/http.service';
@@ -17,7 +16,6 @@ export class AuthComponent implements OnInit {
   isSending = false;
 
   constructor(private fb: FormBuilder,
-              private authService: AuthService,
               private alertCtrl: AlertController,
               private userStoreService: UserStoreService,
               private httpService: HttpService) {

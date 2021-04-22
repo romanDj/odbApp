@@ -240,15 +240,17 @@ export class BackgroundTaskService {
     );
   }
 
-  uploadTask(): Observable<any> {
+  uploadTask() {
     this.uploadingData = true;
     const today: Date = new Date();
 
-    return from(this.liveMetricsService.sendData()).pipe(
-      tap(() => console.log('task uploadData  | ' + `${today.getHours()}:${today.getMinutes()}:${today.getSeconds()}`)),
-      finalize(() => this.uploadingData = false),
-      catchError(() => empty())
-    );
+    return this.liveMetricsService.sendData()
+      .pipe(
+        take(1),
+        tap(() => console.log('task uploadData  | ' + `${today.getHours()}:${today.getMinutes()}:${today.getSeconds()}`)),
+        finalize(() => this.uploadingData = false),
+        catchError(() => empty())
+      );
   }
 
   // Network
@@ -400,7 +402,7 @@ export class BackgroundTaskService {
     if (event !== 'dataReceived' || text.value === 'NO DATA' || text.name === undefined || text.value === undefined) {
       return;
     }
-    console.log('[INFO] Metric for ' + JSON.stringify(text));
+    console.log(`[INFO] ${moment().format('YYYY-MM-DD HH:mm:ss')}  Metric for ` + JSON.stringify(text));
     pdata = {ts: moment().valueOf(), name: text.name, value: text.value};
 
     this.liveMetricsService.push(pdata.name, pdata.value, pdata.ts);

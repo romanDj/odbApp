@@ -5,8 +5,8 @@ import {obdinfo} from '../utils/obdInfo.js';
 import {from, Subscription} from 'rxjs';
 import {Platform} from '@ionic/angular';
 import {BackgroundTaskService} from '../services/background-task.service';
-import { IonContent } from '@ionic/angular';
-import {tap} from 'rxjs/operators';
+import {IonContent} from '@ionic/angular';
+import {finalize, take, tap} from 'rxjs/operators';
 
 @Component({
   selector: 'app-tab3',
@@ -47,7 +47,7 @@ export class Tab3Page {
         let value = x.value,
           description = '',
           unit = '';
-        if (x.isSend === 0){
+        if (x.isSend === 0) {
           this.needSync = true;
         }
         if (x.name === 'location') {
@@ -75,10 +75,13 @@ export class Tab3Page {
     });
   }
 
-  synchronization(){
-    this.liveMetricsService.sendDataRecursion().then(() => {
-      this.loadData();
-    });
+  synchronization() {
+    this.liveMetricsService
+      .sendDataRecursion()
+      .pipe(
+        take(1),
+        finalize(() => this.loadData())
+      ).subscribe();
   }
 
 }
