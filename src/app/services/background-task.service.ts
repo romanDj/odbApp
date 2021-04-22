@@ -137,6 +137,11 @@ export class BackgroundTaskService {
       }).filter(x => x !== null);
     });
 
+
+    this.network.onConnect().subscribe(() => {
+      console.log('network connected');
+    });
+
     // подписка на запуск фоновой задачи
     this.backgroundMode.on('enable').pipe(
       switchMap(() =>
@@ -147,25 +152,20 @@ export class BackgroundTaskService {
             this.uploadData()
           ).pipe(
             finalize(() => this.onStop()),
-            takeUntil(this.backgroundMode.on('disable').pipe(
-              tap(() => this.onStop())
-            ))
+            takeUntil(
+              this.backgroundMode.on('disable').pipe(
+                tap(() => this.onStop()),
+                mergeMap(() =>
+                  this.liveMetricsService.sendDataRecursion().pipe(take(1))
+                )
+              ))
           );
-          // return this.checkBluetoothEnabled().pipe(
-          //   finalize(() => this.onStop()),
-          //   takeUntil(this.backgroundMode.on('disable'))
-          // );
-          // return timer(0, 10000).pipe(
-          //   concatMap((n) => this.task()),
-          //   finalize(() => this.onStop()),
-          //   takeUntil(this.backgroundMode.on('disable'))
-          // );
         }).pipe(
           catchError((err) => {
             this.showError(err);
             console.log('[error] ' + err);
             this.disable();
-            return empty();
+            return this.liveMetricsService.sendDataRecursion().pipe(take(1));
           }),
         )
       )
@@ -233,7 +233,7 @@ export class BackgroundTaskService {
 
         return this.checkNetwork()
         && this.uploadingData === false
-        && typeof user?.subject  === 'string'
+        && typeof user?.subject === 'string'
         && user?.subject.length > 0
           ? this.uploadTask() : empty();
       }))
