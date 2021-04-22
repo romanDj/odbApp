@@ -2,10 +2,11 @@ import {Component, ViewChild} from '@angular/core';
 import {LiveMetricsService} from '../services/live-metrics.service';
 import * as moment from 'moment';
 import {obdinfo} from '../utils/obdInfo.js';
-import {Subscription} from 'rxjs';
+import {from, Subscription} from 'rxjs';
 import {Platform} from '@ionic/angular';
 import {BackgroundTaskService} from '../services/background-task.service';
 import { IonContent } from '@ionic/angular';
+import {tap} from 'rxjs/operators';
 
 @Component({
   selector: 'app-tab3',
@@ -27,9 +28,9 @@ export class Tab3Page {
   }
 
   async ionViewDidEnter() {
-    this.resumeSubscription = this.platform.resume.subscribe(async () => {
-      this.loadData();
-    });
+    this.resumeSubscription = this.platform.resume.pipe(
+      tap(() => this.loadData())
+    ).subscribe();
     this.loadData();
   }
 

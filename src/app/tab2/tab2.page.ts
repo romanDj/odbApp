@@ -1,5 +1,4 @@
 import {ChangeDetectionStrategy, Component, OnDestroy, OnInit} from '@angular/core';
-import {File} from '@ionic-native/file/ngx';
 import {ConfigOdb, ConfigOdbService, OdbMetric} from '../services/config-odb.service';
 import {obdinfo} from '../utils/obdInfo.js';
 import {AlertController} from '@ionic/angular';
@@ -32,7 +31,6 @@ export class Tab2Page implements OnInit, OnDestroy {
   odbMetricsEnabled: OdbMetric[] = [];
 
   constructor(
-    private file: File,
     private configOdbService: ConfigOdbService,
     private backgroundTaskService: BackgroundTaskService,
     private alertCtrl: AlertController,
@@ -41,9 +39,9 @@ export class Tab2Page implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.subscription = this.configOdbService.configOdb.subscribe(configOdb$ => {
-      this.configOdb = configOdb$;
-      this.odbMetricsEnabled = configOdb$.odbMetrics.map(x => {
+    this.subscription = this.configOdbService.configOdb.subscribe((val: ConfigOdb) => {
+      this.configOdb = val;
+      this.odbMetricsEnabled = this.configOdb.odbMetrics.map(x => {
         const getPID = obdinfo.PIDS.find(p => p.name === x);
         if (getPID) {
           return {
@@ -64,11 +62,9 @@ export class Tab2Page implements OnInit, OnDestroy {
   }
 
   ionViewDidEnter(){
-    // console.log('page 2 visible');
   }
 
   ionViewDidLeave(){
-    // console.log('page 2 hidden');
     this.isEdit = false;
   }
 

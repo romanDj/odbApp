@@ -3,7 +3,7 @@ import {SQLite, SQLiteObject} from '@ionic-native/sqlite/ngx';
 import {HTTP} from '@ionic-native/http/ngx';
 import {environment} from '../../environments/environment';
 import {BehaviorSubject} from 'rxjs';
-import {AuthService} from './auth.service';
+import {UserStoreService} from './user-store.service';
 
 
 @Injectable({
@@ -23,7 +23,7 @@ export class LiveMetricsService {
   constructor(
     private sqlite: SQLite,
     private http: HTTP,
-    private authService: AuthService) {
+    private userStoreService: UserStoreService) {
   }
 
   init() {
@@ -127,7 +127,7 @@ export class LiveMetricsService {
 
   sendDataInServer(rows) {
     return new Promise(async (resolve, reject) => {
-      const user = this.authService.authUser$.getValue();
+      const user = this.userStoreService.user$.getValue();
       if (rows.length > 0 && user != null) {
         const url = environment.apiUrl + '/livemetrics';
         const headers = {

@@ -8,9 +8,7 @@ import {
   BackgroundGeolocationResponse,
   BackgroundGeolocationAuthorizationStatus
 } from '@ionic-native/background-geolocation/ngx';
-import {File, FileEntry} from '@ionic-native/file/ngx';
 import {Network, Connection} from '@ionic-native/network/ngx';
-import {HTTP} from '@ionic-native/http/ngx';
 import {BluetoothSerial} from '@ionic-native/bluetooth-serial/ngx';
 
 import {
@@ -48,10 +46,8 @@ import {ConfigOdb, ConfigOdbService} from './config-odb.service';
 import {obdinfo} from '../utils/obdInfo.js';
 import * as moment from 'moment';
 import * as _ from 'underscore';
-import {rejects} from 'assert';
-import {SQLite, SQLiteObject} from '@ionic-native/sqlite/ngx';
 import {LiveMetricsService} from './live-metrics.service';
-import {AuthService} from './auth.service';
+import {UserStoreService} from './user-store.service';
 
 
 const gpsConfig: BackgroundGeolocationConfig = {
@@ -104,16 +100,13 @@ export class BackgroundTaskService {
     private backgroundMode: BackgroundMode,
     private backgroundGeolocation: BackgroundGeolocation,
     private network: Network,
-    private http: HTTP,
     private toastCtrl: ToastController,
     private bluetoothSerial: BluetoothSerial,
     private alertCtrl: AlertController,
-    private file: File,
     private bluetoothService: BluetoothService,
     private configOdbService: ConfigOdbService,
-    private sqlite: SQLite,
     private liveMetricsService: LiveMetricsService,
-    private authService: AuthService) {
+    private userStoreService: UserStoreService) {
   }
 
   async init() {
@@ -236,9 +229,12 @@ export class BackgroundTaskService {
   uploadData(): Observable<any> {
     return timer(0, 20000).pipe(
       concatMap((n) => defer(() => {
+        const user = this.userStoreService.user$.getValue();
+
         return this.checkNetwork()
         && this.uploadingData === false
-        && this.authService.authUser$.getValue() != null
+        && typeof user?.subject  === 'string'
+        && user?.subject.length > 0
           ? this.uploadTask() : empty();
       }))
     );

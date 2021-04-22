@@ -8,13 +8,7 @@ import {SQLite, SQLiteObject} from '@ionic-native/sqlite/ngx';
 import {Network} from '@ionic-native/network/ngx';
 import {HTTP} from '@ionic-native/http/ngx';
 import {BluetoothSerial} from '@ionic-native/bluetooth-serial/ngx';
-import {
-  BackgroundGeolocation,
-  BackgroundGeolocationConfig,
-  BackgroundGeolocationEvents,
-  BackgroundGeolocationResponse,
-  BackgroundGeolocationAuthorizationStatus
-} from '@ionic-native/background-geolocation/ngx';
+import {BackgroundGeolocation} from '@ionic-native/background-geolocation/ngx';
 import {File} from '@ionic-native/file/ngx';
 
 import {IonicModule, IonicRouteStrategy, IonRouterOutlet, Platform} from '@ionic/angular';
@@ -23,9 +17,7 @@ import {IonicStorageModule} from '@ionic/storage-angular';
 import {AppRoutingModule} from './app-routing.module';
 import {AppComponent} from './app.component';
 import {BackgroundMode} from '@ionic-native/background-mode/ngx';
-import {BackgroundTaskService} from './services/background-task.service';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
-import * as CordovaSQLiteDriver from 'localforage-cordovasqlitedriver';
 
 
 @NgModule({

@@ -1,14 +1,19 @@
 import {Injectable} from '@angular/core';
-import {ConfigOdbService} from './config-odb.service';
 import {BluetoothSerial} from '@ionic-native/bluetooth-serial/ngx';
 import {AlertController} from '@ionic/angular';
 import {BehaviorSubject} from 'rxjs';
 
 
-export interface PairedDevice {
+export interface IPairedDevice {
   id: string;
   address: string;
   name: string;
+}
+
+export class PairedDevice implements IPairedDevice{
+  address = '';
+  id = '';
+  name = '';
 }
 
 
@@ -21,9 +26,9 @@ export class BluetoothService {
   readonly pairedList = this.pairedList$.asObservable();
 
   constructor(
-    private configOdbService: ConfigOdbService,
     private bluetoothSerial: BluetoothSerial,
-    private alertCtrl: AlertController) {}
+    private alertCtrl: AlertController) {
+  }
 
 
   async init() {

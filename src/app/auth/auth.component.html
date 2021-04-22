@@ -10,10 +10,10 @@
 
   <ng-container *ngTemplateOutlet="appTpl;
         context: {
-          authUser: authService.authUser | async
+          user: userStoreService.user | async
         }"></ng-container>
-  <ng-template #appTpl let-authUser="authUser">
-    <section *ngIf="authUser == null; else profileTpl">
+  <ng-template #appTpl let-user="user">
+    <section *ngIf="user == null || user.subject === ''; else profileTpl">
       <form [formGroup]="loginForm">
         <ion-item style="margin-bottom: 20px; display: block">
           <ion-label position="stacked">Имя пользователя:</ion-label>
@@ -29,11 +29,12 @@
 
     <ng-template #profileTpl>
       <section>
-        <ion-label style="display: block; margin-bottom: 30px; margin-top: 15px">Пользователь: {{authUser.name}}</ion-label>
-        <ion-button (click)="authService.logout()"  expand="block" color="danger">Выйти</ion-button>
+        <ion-label style="display: block; margin-bottom: 30px; margin-top: 15px">Пользователь: {{user.name}}</ion-label>
+        <ion-button (click)="logout()"  expand="block" color="danger">Выйти</ion-button>
       </section>
     </ng-template>
   </ng-template>
 
+  <ion-button (click)="testApiCall()"  expand="block">Тестовое api</ion-button>
 
 </ion-content>

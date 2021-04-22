@@ -4,7 +4,7 @@ import {BehaviorSubject, Observable} from 'rxjs';
 import {PairedDevice} from './bluetooth.service';
 import {map} from 'rxjs/operators';
 import {obdinfo} from '../utils/obdInfo.js';
-
+import {FileStoreJson} from '../utils/file-store-json';
 
 
 export interface OdbMetric {
@@ -15,9 +15,14 @@ export interface OdbMetric {
   unit: string;
 }
 
-export interface ConfigOdb {
+export interface IConfigOdb {
   bluetoothDeviceToUse: PairedDevice;
   odbMetrics: string[];
+}
+
+export class ConfigOdb implements IConfigOdb{
+  bluetoothDeviceToUse: PairedDevice = new PairedDevice();
+  odbMetrics: string[] = new Array<string>();
 }
 
 
@@ -26,94 +31,21 @@ export interface ConfigOdb {
 })
 export class ConfigOdbService {
 
-  private configOdb$: BehaviorSubject<ConfigOdb> = new BehaviorSubject<ConfigOdb>({
-    odbMetrics: [],
-    bluetoothDeviceToUse: {
-      address: '',
-      id: '',
-      name: ''
-    }
-  });
+  configStore: FileStoreJson = new FileStoreJson('OdbMetrics', this.file);
+
+  private configOdb$: BehaviorSubject<ConfigOdb> = new BehaviorSubject<ConfigOdb>(new ConfigOdb());
   readonly configOdb = this.configOdb$.asObservable();
 
-  constructor(private file: File) {}
+  constructor(private file: File) {
+  }
 
   async init() {
-    const data = await this.read();
-    if (data != null && typeof data === 'string' && data.length > 0){
-      try {
-        const dt = JSON.parse(data);
-        this.configOdb$.next(dt);
-      }catch (e) {
-        await this.emptySave();
-      }
-    }else{
-      await this.emptySave();
-    }
+    const data: any = await this.configStore.read();
+    this.configOdb$.next(data || new ConfigOdb());
   }
 
-  async emptySave(){
-    const cfg: ConfigOdb = {
-      odbMetrics: [],
-      bluetoothDeviceToUse: {
-        address: '',
-        id: '',
-        name: ''
-      }
-    };
-    await this.save(cfg);
-    this.configOdb$.next(cfg);
-  }
-
-  async update(configOdb: ConfigOdb){
-    await this.save(configOdb);
+  async update(configOdb: ConfigOdb) {
+    await this.configStore.save(configOdb);
     this.configOdb$.next(configOdb);
-  }
-
-  async read() {
-    const fileEntry: any = await this.accessToFile();
-    return await new Promise((resolve, reject) => {
-      fileEntry.file((file) => {
-        const reader = new FileReader();
-        reader.onloadend = function() {
-          resolve(this.result);
-        };
-        reader.readAsText(file);
-      }, (error) => {
-        console.log(error);
-        reject(error);
-      });
-    });
-  }
-
-  async save(configOdb?: ConfigOdb) {
-    const fileEntry: any = await this.accessToFile();
-    return await new Promise((resolve, reject) => {
-      fileEntry.createWriter((fileWriter) => {
-        // вставка в конец файла
-        // try {
-        //   fileWriter.seek(fileWriter.length);
-        // } catch (e) {
-        //   console.log('[ERROR] file doesn\'t exist');
-        // }
-        fileWriter.write(JSON.stringify(!configOdb ? this.configOdb$.value : configOdb));
-        resolve();
-      }, (err) => {
-        reject(err);
-      });
-    });
-  }
-
-  async accessToFile() {
-    const fileConfig = 'OdbMetrics.json';
-
-    const dirEntry: any = await this.file.resolveLocalFilesystemUrl(this.file.dataDirectory);
-    return await new Promise((resolve, reject) => {
-      dirEntry.getFile(fileConfig, {create: true, exclusive: false}, (fileEntry) => {
-        resolve(fileEntry);
-      }, (err) => {
-        reject(err);
-      });
-    });
   }
 }

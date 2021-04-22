@@ -2,6 +2,9 @@ import {Component, OnInit} from '@angular/core';
 import {FormGroup, FormControl, FormBuilder, Validators} from '@angular/forms';
 import {AuthService} from '../services/auth.service';
 import {AlertController} from '@ionic/angular';
+import {UserStoreService} from '../services/user-store.service';
+import {HttpService} from '../services/api/http.service';
+import {finalize, take} from 'rxjs/operators';
 
 @Component({
   selector: 'app-auth',
@@ -15,7 +18,9 @@ export class AuthComponent implements OnInit {
 
   constructor(private fb: FormBuilder,
               private authService: AuthService,
-              private alertCtrl: AlertController) {
+              private alertCtrl: AlertController,
+              private userStoreService: UserStoreService,
+              private httpService: HttpService) {
     this.loginForm = this.fb.group({
       username: ['', Validators.required],
       password: ['', Validators.required]
@@ -25,11 +30,11 @@ export class AuthComponent implements OnInit {
   ngOnInit() {
   }
 
-  ionViewDidEnter(){
+  ionViewDidEnter() {
     this.loginForm.markAsUntouched({onlySelf: false});
   }
 
-  ionViewDidLeave(){
+  ionViewDidLeave() {
 
   }
 
@@ -47,22 +52,38 @@ export class AuthComponent implements OnInit {
   login() {
     this.isSending = true;
     const {username, password} = this.loginForm.value;
-    this.authService.login(username, password).then((val) => {
-      this.showAlert('Авторизия', 'Вы успешно авторизировались');
-    }).catch((error) => {
-      console.log(error);
-      try {
-        this.showAlert('Ошибка', `${error.error} \n ${error.error_description}`);
-      } catch (e) {
-        console.log(e);
+    this.httpService.authentication(username, password).pipe(
+      take(1),
+      finalize(() => {
+        this.loginForm.patchValue({
+          username: '',
+          password: ''
+        });
+        this.loginForm.markAsUntouched({onlySelf: false});
+        this.isSending = false;
+      })
+    ).subscribe(
+      (response) => {
+        this.showAlert('Авторизия', 'Вы успешно авторизировались');
+      },
+      (error) => {
+        try {
+          this.showAlert('Ошибка', `${error.error} \n ${error.error_description}`);
+        } catch (e) {
+          console.log(e);
+        }
       }
-    }).finally(() => {
-      this.loginForm.patchValue({
-        username: '',
-        password: ''
-      });
-      this.loginForm.markAsUntouched({onlySelf: false});
-      this.isSending = false;
-    });
+    );
+  }
+
+  logout() {
+    this.userStoreService.update(null);
+  }
+
+  testApiCall(){
+    this.httpService.testApi().pipe(
+      take(1),
+      finalize(() => console.log('[TEST API] Finish'))
+    ).subscribe();
   }
 }
