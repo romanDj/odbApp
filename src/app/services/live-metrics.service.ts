@@ -5,7 +5,7 @@ import {environment} from '../../environments/environment';
 import {BehaviorSubject, empty, from, Observable, of, throwError} from 'rxjs';
 import {UserStoreService} from './user-store.service';
 import {HttpSendOptions, HttpService} from './api/http.service';
-import {catchError, concatMap, finalize, switchMap, tap} from 'rxjs/operators';
+import {catchError, concatMap, finalize, switchMap, take, tap} from 'rxjs/operators';
 import {ToastController} from '@ionic/angular';
 
 
@@ -130,10 +130,11 @@ export class LiveMetricsService {
       .pipe(
         switchMap((rows: any) => rows?.length > 0
           ? this.sendDataInServerObs(rows)
-          : empty()
+          : of(1)
         ),
-        catchError((error) =>
-          from(this.presentToast(JSON.stringify(error)))),
+        catchError((error) => {
+          return throwError(error);
+        }),
         finalize(() => this.isSend$.next(false))
       );
   }

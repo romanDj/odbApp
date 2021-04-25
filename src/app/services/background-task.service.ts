@@ -10,6 +10,7 @@ import {
 } from '@ionic-native/background-geolocation/ngx';
 import {Network, Connection} from '@ionic-native/network/ngx';
 import {BluetoothSerial} from '@ionic-native/bluetooth-serial/ngx';
+import {LocalNotifications} from '@ionic-native/local-notifications/ngx';
 
 import {
   BehaviorSubject,
@@ -24,7 +25,7 @@ import {
   empty,
   from,
   throwError,
-  concat
+  concat, zip
 } from 'rxjs';
 import {
   catchError,
@@ -39,7 +40,7 @@ import {
   filter,
   mergeMap,
   map,
-  first, scan, publish, share, retryWhen, delayWhen, delay
+  first, scan, publish, share, retryWhen, delayWhen, delay, takeWhile
 } from 'rxjs/operators';
 import {BluetoothService} from './bluetooth.service';
 import {ConfigOdb, ConfigOdbService} from './config-odb.service';
@@ -48,6 +49,7 @@ import * as moment from 'moment';
 import * as _ from 'underscore';
 import {LiveMetricsService} from './live-metrics.service';
 import {UserStoreService} from './user-store.service';
+import BackgroundFetch from 'cordova-plugin-background-fetch';
 
 
 const gpsConfig: BackgroundGeolocationConfig = {
@@ -106,13 +108,15 @@ export class BackgroundTaskService {
     private bluetoothService: BluetoothService,
     private configOdbService: ConfigOdbService,
     private liveMetricsService: LiveMetricsService,
-    private userStoreService: UserStoreService) {
+    private userStoreService: UserStoreService,
+    private localNotifications: LocalNotifications
+  ) {
   }
 
   async init() {
     this.backgroundMode.setDefaults({
       title: 'odbApp',
-      text: 'Данные считываются с odb в реальном времени',
+      text: 'Приложение работает в фоновом режиме',
       resume: false,
       hidden: true,
       bigText: false,
@@ -137,11 +141,6 @@ export class BackgroundTaskService {
       }).filter(x => x !== null);
     });
 
-
-    this.network.onConnect().subscribe(() => {
-      console.log('network connected');
-    });
-
     // подписка на запуск фоновой задачи
     this.backgroundMode.on('enable').pipe(
       switchMap(() =>
@@ -154,9 +153,26 @@ export class BackgroundTaskService {
             finalize(() => this.onStop()),
             takeUntil(
               this.backgroundMode.on('disable').pipe(
+                take(1),
                 tap(() => this.onStop()),
-                mergeMap(() =>
-                  this.liveMetricsService.sendDataRecursion().pipe(take(1))
+                mergeMap(() => {
+                    this.presentToast('Идет синхронизация...\nПожалуста оставайтесь в приложении');
+                    return this.liveMetricsService.sendDataRecursion()
+                      .pipe(
+                        tap(() => this.presentToast('Данные успешно синхронизированы')),
+                        catchError(() => {
+                          this.presentToast('Данные автоматически синхронизируются позже');
+                          BackgroundFetch.scheduleTask({
+                            taskId: 'com.odbApp.sync',
+                            forceAlarmManager: true,
+                            delay: 5000,  // <-- milliseconds
+                            periodic: true
+                          });
+                          return empty();
+                        }),
+                        take(1)
+                      );
+                  }
                 )
               ))
           );
@@ -171,6 +187,7 @@ export class BackgroundTaskService {
       )
     ).subscribe();
     this.enableGPSTracking();
+    this.enableBackgroundFetch();
   }
 
   showError(error) {
@@ -182,6 +199,15 @@ export class BackgroundTaskService {
       }).then(alert => alert.present().then(() => resolve()))
         .catch(() => reject());
     });
+  }
+
+  async presentToast(message: string) {
+    const toast = await this.toastCtrl.create({
+      message,
+      duration: 10000,
+      keyboardClose: true
+    });
+    await toast.present();
   }
 
   enable(): void {
@@ -197,6 +223,7 @@ export class BackgroundTaskService {
   onStart() {
     console.log('-- background mode enabled');
     this.backgroundMode.disableWebViewOptimizations();
+    BackgroundFetch.stopTask('com.odbApp.sync');
   }
 
   onStop() {
@@ -227,7 +254,8 @@ export class BackgroundTaskService {
   }
 
   uploadData(): Observable<any> {
-    return timer(0, 20000).pipe(
+    return interval(20000).pipe(
+      takeWhile(() => this.statusTask$.value === true),
       concatMap((n) => defer(() => {
         const user = this.userStoreService.user$.getValue();
 
@@ -288,6 +316,57 @@ export class BackgroundTaskService {
           });
         });
       });
+  }
+
+  // Background fetch
+
+  enableBackgroundFetch() {
+    // @ts-ignore
+    const config: any = {
+      stopOnTerminate: false,
+      minimumFetchInterval: 15
+    };
+    const onEvent = async (taskId) => {
+      console.log('[BackgroundFetch] event received: ', taskId);
+      switch (taskId) {
+        case 'com.odbApp.sync':
+          this.localNotifications.schedule({
+            title: 'Данные синхронизируются...',
+            launch: true
+          });
+          this.liveMetricsService.sendDataRecursion().pipe(
+            take(1),
+            tap(() => console.log('Data send')),
+            switchMap(() => {
+              BackgroundFetch.stopTask('com.odbApp.sync');
+              this.localNotifications.schedule({
+                title: 'Синхронизировано \n' + moment().format('YYYY-MM-DD HH:mm:ss'),
+                launch: true
+              });
+              return empty();
+            }),
+            catchError((error) => {
+              this.localNotifications.schedule({
+                title: 'Синхронизация не удалась \n' + moment().format('YYYY-MM-DD HH:mm:ss'),
+                launch: true
+              });
+              console.log('[Sync error] ' + error);
+              return empty();
+            })
+          ).subscribe();
+          break;
+        default:
+          console.log('Default fetch task');
+      }
+      BackgroundFetch.finish(taskId);
+    };
+
+    const onTimeout = async (taskId) => {
+      console.log('[BackgroundFetch] TIMEOUT: ', taskId);
+      BackgroundFetch.finish(taskId);
+    };
+
+    BackgroundFetch.configure(config, onEvent, onTimeout);
   }
 
 

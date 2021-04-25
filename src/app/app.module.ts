@@ -10,6 +10,7 @@ import {HTTP} from '@ionic-native/http/ngx';
 import {BluetoothSerial} from '@ionic-native/bluetooth-serial/ngx';
 import {BackgroundGeolocation} from '@ionic-native/background-geolocation/ngx';
 import {File} from '@ionic-native/file/ngx';
+import { LocalNotifications } from '@ionic-native/local-notifications/ngx';
 
 import {IonicModule, IonicRouteStrategy, IonRouterOutlet, Platform} from '@ionic/angular';
 import {IonicStorageModule} from '@ionic/storage-angular';
@@ -42,7 +43,8 @@ import {FormsModule, ReactiveFormsModule} from '@angular/forms';
     BatteryStatus,
     BackgroundGeolocation,
     BluetoothSerial,
-    BackgroundMode
+    BackgroundMode,
+    LocalNotifications
   ],
   bootstrap: [AppComponent],
 })
