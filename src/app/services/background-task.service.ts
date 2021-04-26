@@ -6,7 +6,7 @@ import {
   BackgroundGeolocationConfig,
   BackgroundGeolocationEvents,
   BackgroundGeolocationResponse,
-  BackgroundGeolocationAuthorizationStatus
+  BackgroundGeolocationAuthorizationStatus,
 } from '@ionic-native/background-geolocation/ngx';
 import {Network, Connection} from '@ionic-native/network/ngx';
 import {BluetoothSerial} from '@ionic-native/bluetooth-serial/ngx';
@@ -53,9 +53,10 @@ import BackgroundFetch from 'cordova-plugin-background-fetch';
 
 
 const gpsConfig: BackgroundGeolocationConfig = {
-  desiredAccuracy: 10,
+  locationProvider: 2,
+  desiredAccuracy: 0,
   stationaryRadius: 20,
-  distanceFilter: 5,
+  distanceFilter: 0,
   interval: 10000,
   fastestInterval: 5000,
   activitiesInterval: 10000,
