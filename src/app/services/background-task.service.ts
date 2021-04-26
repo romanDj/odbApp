@@ -257,6 +257,7 @@ export class BackgroundTaskService {
     return interval(20000).pipe(
       takeWhile(() => this.statusTask$.value === true),
       concatMap((n) => defer(() => {
+        this.liveMetricsService.clearOldData();
         const user = this.userStoreService.user$.getValue();
 
         return this.checkNetwork()
@@ -332,7 +333,8 @@ export class BackgroundTaskService {
         case 'com.odbApp.sync':
           this.localNotifications.schedule({
             title: 'Данные синхронизируются...',
-            launch: true
+            launch: true,
+            silent: true
           });
           this.liveMetricsService.sendDataRecursion().pipe(
             take(1),
@@ -341,14 +343,16 @@ export class BackgroundTaskService {
               BackgroundFetch.stopTask('com.odbApp.sync');
               this.localNotifications.schedule({
                 title: 'Синхронизировано \n' + moment().format('YYYY-MM-DD HH:mm:ss'),
-                launch: true
+                launch: true,
+                silent: true
               });
               return empty();
             }),
             catchError((error) => {
               this.localNotifications.schedule({
                 title: 'Синхронизация не удалась \n' + moment().format('YYYY-MM-DD HH:mm:ss'),
-                launch: true
+                launch: true,
+                silent: true
               });
               console.log('[Sync error] ' + error);
               return empty();

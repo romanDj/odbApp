@@ -7,6 +7,7 @@ import {UserStoreService} from './user-store.service';
 import {HttpSendOptions, HttpService} from './api/http.service';
 import {catchError, concatMap, finalize, switchMap, take, tap} from 'rxjs/operators';
 import {ToastController} from '@ionic/angular';
+import * as moment from 'moment';
 
 
 @Injectable({
@@ -49,6 +50,7 @@ export class LiveMetricsService {
                        )`, [])
           .then(() => {
             console.log('[INFO] Executed CREATE TABLE IF NOT EXISTS liveMetric');
+            this.clearOldData();
           }).catch((e) => console.log('ERR CREATING TABLE liveMetric ' + JSON.stringify(e)));
       }).catch(err => {
         console.log('[INFO]  ' + JSON.stringify(err));
@@ -160,8 +162,18 @@ export class LiveMetricsService {
       );
   }
 
-  clearTreeDayData() {
-
+  clearOldData() {
+    return new Promise((resolve, reject) => {
+      this.database.executeSql(
+        `DELETE FROM liveMetric  WHERE isSend = 1 AND ts < ${moment().subtract(2, 'minutes').valueOf()}`,
+        []).then(() => {
+        console.log('[CLEAR OLD DATA] Success');
+        resolve();
+      }).catch((err) => {
+        console.log('[CLEAR OLD DATA] ERROR ' + err.message);
+        reject();
+      });
+    });
   }
 
   async presentToast(message: string) {

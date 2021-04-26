@@ -4,6 +4,11 @@
       Данные
     </ion-title>
     <ion-buttons slot="end">
+      <ion-button (click)="clearSendData()" [disabled]="liveMetricsService.isLoadRows | async">
+        <ion-icon slot="start" name="trash"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-buttons slot="end">
       <ion-button id="changeText" (click)="loadData()" [disabled]="liveMetricsService.isLoadRows | async">
         <ion-icon slot="start" name="refresh"></ion-icon>
       </ion-button>

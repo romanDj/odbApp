@@ -84,4 +84,10 @@ export class Tab3Page {
       ).subscribe();
   }
 
+  clearSendData(){
+    this.liveMetricsService.clearOldData().then(() => {
+        this.loadData();
+    });
+  }
+
 }
