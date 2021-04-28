@@ -9,7 +9,6 @@ import {StatusBar} from '@ionic-native/status-bar/ngx';
 
 import {BackgroundGeolocation} from '@ionic-native/background-geolocation/ngx';
 import {File} from '@ionic-native/file/ngx';
-import {BatteryStatus} from '@ionic-native/battery-status/ngx';
 import {SQLite} from '@ionic-native/sqlite/ngx';
 import {Network} from '@ionic-native/network/ngx';
 import {HTTP} from '@ionic-native/http/ngx';
@@ -33,7 +32,7 @@ export class AppComponent implements OnInit, OnDestroy {
     private splashScreen: SplashScreen,
     private statusBar: StatusBar,
     private backgroundGeolocation: BackgroundGeolocation,
-    private file: File, private batteryStatus: BatteryStatus,
+    private file: File,
     private navCtrl: NavController,
     private alertCtrl: AlertController,
     private bluetoothSerial: BluetoothSerial,

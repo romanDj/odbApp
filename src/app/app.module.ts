@@ -3,7 +3,6 @@ import {BrowserModule} from '@angular/platform-browser';
 import {RouteReuseStrategy} from '@angular/router';
 import {SplashScreen} from '@ionic-native/splash-screen/ngx';
 import {StatusBar} from '@ionic-native/status-bar/ngx';
-import {BatteryStatus} from '@ionic-native/battery-status/ngx';
 import {SQLite, SQLiteObject} from '@ionic-native/sqlite/ngx';
 import {Network} from '@ionic-native/network/ngx';
 import {HTTP} from '@ionic-native/http/ngx';
@@ -40,7 +39,6 @@ import {FormsModule, ReactiveFormsModule} from '@angular/forms';
     SQLite,
     Network,
     HTTP,
-    BatteryStatus,
     BackgroundGeolocation,
     BluetoothSerial,
     BackgroundMode,
