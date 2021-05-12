@@ -4,8 +4,8 @@
 
 export const environment = {
   production: false,
-  apiUrl: 'https://192.168.1.62:5000/gasDiesel/api',
-  identityUrl: 'https://192.168.1.62:5000/identityServer'
+  apiUrl: 'http://obdapi.somee.com/api',
+  identityUrl: 'https://identitystsidentity20210507101235.azurewebsites.net'
 };
 
 /*

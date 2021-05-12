@@ -8,6 +8,7 @@ import {HttpSendOptions, HttpService} from './api/http.service';
 import {catchError, concatMap, finalize, switchMap, take, tap} from 'rxjs/operators';
 import {ToastController} from '@ionic/angular';
 import * as moment from 'moment';
+import {ReceiveItemQ} from '../utils/queue';
 
 
 @Injectable({
@@ -60,12 +61,31 @@ export class LiveMetricsService {
   }
 
   push(name: string, value: string, time: number) {
-    return new Promise((response, reject) => {
+    return new Promise((resolve, reject) => {
       this.database.executeSql(
         'INSERT INTO liveMetric VALUES (?,?,?,?,?,?)',
         [null, time, name, value, 0, 0]).then(() => {
+          resolve();
+      }).catch((err) => {
+        console.log('[ERROR] ' + err.message);
+        resolve();
+      });
+    });
+  }
 
-      }).catch((err) => console.log('[ERROR] ' + err.message));
+  pushFromQueue(item: ReceiveItemQ){
+    return new Promise((resolve, reject) => {
+      this.database.transaction((tx) => {
+        item.items.forEach((val) => {
+          tx.executeSql('INSERT INTO liveMetric VALUES (?,?,?,?,?,?)',
+            [null, item.ts, val.name, val.value, 0, 0]);
+        });
+      }).then(() => {
+        resolve();
+      }).catch((err) => {
+        console.log('[ERROR] ' + err.message);
+        resolve();
+      });
     });
   }
 

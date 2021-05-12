@@ -50,6 +50,7 @@ import * as _ from 'underscore';
 import {LiveMetricsService} from './live-metrics.service';
 import {UserStoreService} from './user-store.service';
 import BackgroundFetch from 'cordova-plugin-background-fetch';
+import {Queue, ReceiveItemQ} from '../utils/queue';
 
 
 const gpsConfig: BackgroundGeolocationConfig = {
@@ -87,7 +88,7 @@ export class BackgroundTaskService {
   lastConnectedToOBD;
   btIsConnecting = false;
   btConnected = false;
-  queue = [];
+  queueStore: Queue = new Queue();
   receivedData = '';
   activePollers = [];
   writeDelay = 50;
@@ -229,7 +230,7 @@ export class BackgroundTaskService {
 
   onStop() {
     console.log('-- background mode disabled');
-    this.queue = [];
+    this.queueStore.clear();
     this.statusTask$.next(false);
     this.btConnected = false;
     this.btIsConnecting = false;
@@ -305,18 +306,18 @@ export class BackgroundTaskService {
 
     this.backgroundGeolocation.configure(gpsConfig)
       .then(() => {
-        this.backgroundGeolocation.on(BackgroundGeolocationEvents.location).subscribe((location: BackgroundGeolocationResponse) => {
-          const objData = {
-            name: 'location',
-            value: JSON.stringify({latitude: location.latitude, longitude: location.longitude})
-          };
-          this.btEventEmit('dataReceived', objData);
-
-          // for ios
-          this.backgroundGeolocation.startTask().then((taskKey: number): void => {
-            this.backgroundGeolocation.endTask(taskKey);
-          });
-        });
+        // this.backgroundGeolocation.on(BackgroundGeolocationEvents.location).subscribe((location: BackgroundGeolocationResponse) => {
+        //   const objData = {
+        //     name: 'location',
+        //     value: JSON.stringify({latitude: location.latitude, longitude: location.longitude})
+        //   };
+        //   this.btEventEmit('dataReceived', objData);
+        //
+        //   // for ios
+        //   this.backgroundGeolocation.startTask().then((taskKey: number): void => {
+        //     this.backgroundGeolocation.endTask(taskKey);
+        //   });
+        // });
       });
   }
 
@@ -428,9 +429,7 @@ export class BackgroundTaskService {
     return merge(
       // канал для получения и чтения данных с устройства
       this.bluetoothSerial.subscribe('>').pipe(
-        tap((val) => {
-          this.btDataReceived(val);
-        }),
+        concatMap((val) => this.btDataReceivedObs(val)),
         catchError((err) => {
           console.log('[error] Received error - ' + err);
           return throwError(err);
@@ -466,11 +465,11 @@ export class BackgroundTaskService {
 
   btWrite(message, replies = 0) {
     if (this.btConnected) {
-      if (this.queue.length < 256) {
+      if (this.queueStore.sendItems.length < 256) {
         if (replies !== 0) {
-          this.queue.push(message + replies + '\r');
+          this.queueStore.addSendItem(message + replies + '\r');
         } else {
-          this.queue.push(message + '\r');
+          this.queueStore.addSendItem(message + '\r');
         }
       } else {
         this.btEventEmit('error', 'Queue-overflow!');
@@ -480,16 +479,17 @@ export class BackgroundTaskService {
     }
   }
 
+  /** old method */
   btEventEmit(event, text?) {
     let pdata = {ts: 0, name: '', value: ''};
 
     if (event !== 'dataReceived' || text.value === 'NO DATA' || text.name === undefined || text.value === undefined) {
       return;
     }
-    console.log(`[INFO] ${moment().format('YYYY-MM-DD HH:mm:ss')}  Metric for ` + JSON.stringify(text));
+    // console.log(`[INFO] ${moment().format('YYYY-MM-DD HH:mm:ss')}  Metric for ` + JSON.stringify(text));
     pdata = {ts: moment().valueOf(), name: text.name, value: text.value};
 
-    this.liveMetricsService.push(pdata.name, pdata.value, pdata.ts);
+    // this.liveMetricsService.push(pdata.name, pdata.value, pdata.ts);
 
     if (pdata.name === 'rpm') {
       this.lastRPMmetricTimestamp = pdata.ts;
@@ -532,8 +532,103 @@ export class BackgroundTaskService {
     }
   }
 
+  btDataReceivedObs(data): Observable<any> {
+    this.lastConnectedToOBD = Date.now();
+
+    const currentString = this.receivedData + data.toString(); // making sure it's a utf8 string
+    const arrayOfCommands = currentString.split('>');
+
+    if (arrayOfCommands.length < 2) {
+      this.receivedData = arrayOfCommands[0];
+      return of('');
+    } else {
+      const commands = arrayOfCommands
+        .filter(x => x.length > 0)
+        .map(x => {
+          this.receivedData = '';
+          return x.split('\r')
+            .filter(y => y.length > 0);
+        }).reduce((acc, curr) => ([...acc, ...curr]), []);
+
+      return from(commands).pipe(
+        concatMap(val =>
+          defer(() => {
+            let reply: any;
+            try {
+              reply = this.parseOBDCommand(val);
+            } catch (e) {
+              console.log('[ERROR PARSE]' + e);
+            }
+
+            if (reply?.name && reply?.value) {
+              return this.btEventEmitObs('dataReceived', reply);
+            } else if (reply?.name === undefined || reply?.mode === undefined) {
+              if (['NO DATA', 'UNABLE TO CONNECT', 'SEARCHING...'].includes(reply.value || '')) {
+                return throwError(reply.value);
+              }
+              return of('');
+            }
+            return of('');
+          })
+        ));
+    }
+  }
+
+  btEventEmitObs(event, text?): Observable<any> {
+    if (event !== 'dataReceived' || text.value === 'NO DATA'
+      || text.name === undefined || text.value === undefined) {
+      return;
+    }
+
+    let completeData = this.queueStore.editReceiveItem(text.name, text.value);
+
+    if (completeData) {
+
+      return from(this.backgroundGeolocation
+        .getCurrentLocation({
+          timeout: 4000,
+          maximumAge: 4000,
+          enableHighAccuracy: true
+        }))
+        .pipe(
+          switchMap((location) => defer(() => {
+            const objData = {
+              name: 'location',
+              value: JSON.stringify({latitude: location.latitude, longitude: location.longitude})
+            };
+            completeData.items.push(objData);
+            completeData = {
+              ...completeData,
+              ts: moment().valueOf(),
+              items:  completeData.items.filter(x => x.value !== '')
+            };
+            console.log(`[COMPLETE DATA] ${moment().format('HH:mm:ss')}`
+              + JSON.stringify({
+                ...completeData,
+                ts: moment(completeData.ts).format('HH:mm:ss')
+              }));
+            return from(this.liveMetricsService.pushFromQueue(completeData));
+          })),
+          catchError((err) => {
+            console.log('[current gps err] ' + err);
+            completeData = {
+              ...completeData,
+              ts: moment().valueOf(),
+              items:  completeData.items.filter(x => x.value !== '')
+            };
+            return from(this.liveMetricsService.pushFromQueue(completeData));
+          }),
+          take(1)
+        );
+    }
+
+    return of('');
+  }
+
+  /** old method */
   btDataReceived(data) {
     this.lastConnectedToOBD = Date.now();
+    // console.log('[Data send with delimiter] ' + data);
 
     const currentString = this.receivedData + data.toString(); // making sure it's a utf8 string
     const arrayOfCommands = currentString.split('>');
@@ -554,8 +649,7 @@ export class BackgroundTaskService {
           if (messageString === '') {
             continue;
           }
-          let reply;
-          reply = this.parseOBDCommand(messageString);
+          const reply = this.parseOBDCommand(messageString);
           this.btEventEmit('dataReceived', reply);
           this.receivedData = '';
         }
@@ -563,11 +657,13 @@ export class BackgroundTaskService {
     }
   }
 
-  parseOBDCommand(hexString) {
+  parseOBDCommand(hexString: string) {
     // tslint:disable-next-line:one-variable-per-declaration
     let reply: { value?: any; mode?: any; pid?: any; name?: any; },
       byteNumber,
-      valueArray; // New object
+      valueArray;
+
+    // console.log('[Parse OBDC] ' + hexString);
 
     reply = {};
     if (hexString === 'NO DATA' || hexString === 'OK' || hexString === '?' || hexString === 'UNABLE TO CONNECT' || hexString === 'SEARCHING...') {
@@ -649,20 +745,23 @@ export class BackgroundTaskService {
   enableIntervalWriter(): Observable<any> {
     // Updated with Adaptive Timing on ELM327. 20 queries a second seems good enough.
     return interval(this.writeDelay).pipe(
-      mergeMap(() => defer(() => {
-        if (this.queue.length > 0 && this.btConnected) {
-          const writeData = this.queue.shift();
+      concatMap(() => defer(() => {
+        if (this.queueStore.sendItems.length > 0 && this.btConnected) {
+          const writeData = this.queueStore.shiftSendItem();
+          // console.log('[IN QUEUE] ' + JSON.stringify(this.queueStore.sendItems));
           return from(new Promise((resolve, reject) => {
             this.bluetoothSerial.write(writeData + '\r')
               .then((success) => {
                 this.btEventEmit('wrote data ', writeData);
+                resolve();
               }).catch((err) => {
                 this.btEventEmit('error', err);
+                reject(err);
               }
             );
           }));
         }
-        return empty();
+        return of('');
       })),
       catchError((err) => {
         this.btEventEmit('error', 'Error while writing: ' + err);
@@ -685,8 +784,13 @@ export class BackgroundTaskService {
   }
 
   addPoller(name) {
-    const stringToSend = this.getPIDByName(name);
-    this.activePollers.push(stringToSend);
+    const pid = this.getPIDByName(name);
+    if (pid) {
+      this.activePollers.push({
+        pid,
+        name
+      });
+    }
   }
 
   removeAllPollers() {
@@ -694,14 +798,21 @@ export class BackgroundTaskService {
   }
 
   writePollers() {
+    const item: ReceiveItemQ = {
+      ts: moment().valueOf(),
+      items: this.activePollers.map(val =>
+          ({name: val.name, value: ''}))
+        || []
+    };
+    this.queueStore.addReceiveItem(item);
     for (const actPoll of this.activePollers) {
-      this.btWrite(actPoll, 1);
+      this.btWrite(actPoll.pid, 1);
     }
   }
 
   btConnect() {
     console.log('connected');
-    this.queue = [];
+    this.queueStore.clear();
     this.statusTask$.next(true);
     this.btConnected = true;
     this.btIsConnecting = false;
