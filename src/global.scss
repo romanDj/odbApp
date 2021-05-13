@@ -24,3 +24,43 @@
 @import "~@ionic/angular/css/text-alignment.css";
 @import "~@ionic/angular/css/text-transformation.css";
 @import "~@ionic/angular/css/flex-utils.css";
+
+// === Scroll ===
+::-webkit-scrollbar {
+  width: 10px !important;
+  height: 4px !important;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: #EDEEF0 !important;
+  border-radius: 2px !important;
+}
+
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #B3BBBF !important;
+  border-radius: 2px !important;
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #555 !important;
+}
+// === / Scroll ===
+
+
+.devices-alert {
+  --min-width: 80%;
+
+  .alert-radio-group::-webkit-scrollbar, .alert-checkbox-group::-webkit-scrollbar {
+    display: block !important;
+  }
+
+  .alert-radio-label{
+    padding-left: 30px;
+  }
+  .alert-radio-icon{
+    left: 15px;
+  }
+}

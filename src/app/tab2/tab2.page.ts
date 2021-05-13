@@ -22,8 +22,9 @@ export class Tab2Page implements OnInit, OnDestroy {
   isEdit = false;
   isSaving = false;
   alertOptions: any = {
+    cssClass: 'devices-alert',
     header: 'Список устройств',
-    translucent: true
+    translucent: true,
   };
   pairedDevice: PairedDevice;
   pairedDeviceId = '';
