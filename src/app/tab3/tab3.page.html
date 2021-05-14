@@ -16,7 +16,8 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true" class="ion-padding list-bottom-padding">
+<ion-content [fullscreen]="true">
+
   <ng-container
     *ngTemplateOutlet="asyncTemplate;context:{
       isLoading: liveMetricsService.isLoadRows | async,
@@ -25,32 +26,31 @@
     }">
   </ng-container>
   <ng-template #asyncTemplate let-isLoading="isLoading" let-isSending="isSending" let-statusTask="statusTask">
-    <ion-row class="ion-justify-content-center" *ngIf="isLoading">
-      <ion-text>Загрузка...</ion-text>
-    </ion-row>
-    <ion-list *ngIf="liveMetrics.length > 0">
-      <ion-item *ngFor="let i of liveMetrics">
-        <ion-label>
-          <h2>{{i.description}}</h2>
-          <strong style="display: block;margin-bottom: 5px">
-            <ion-note slot="end" color="primary" *ngIf="i.name !=='location'">{{i.value }} {{i.unit}}</ion-note>
-            <ion-note slot="end" color="primary" *ngIf="i.name =='location'">
-              lat: {{i.value.latitude }} | long: {{i.value.longitude }}
-            </ion-note>
-          </strong>
-          <ion-text style="display:block;" [color]="i.isSend == 0 ? 'danger' : 'success'">
-            {{i.isSend == 0 ? 'Не отправлено' : 'Синхронизировано'}}
-          </ion-text>
-          <p class="ion-padding-top">{{i.ts}}</p>
-        </ion-label>
-      </ion-item>
-    </ion-list>
-    <ion-text *ngIf="!isLoading && liveMetrics.length == 0" color="medium" style="display: block; text-align: center;">
-      -- данных нет --
-    </ion-text>
-
-    <br>
-    <br>
+    <div class="data-content">
+      <ion-row class="ion-justify-content-center" *ngIf="isLoading">
+        <ion-text>Загрузка...</ion-text>
+      </ion-row>
+      <div *ngIf="liveMetrics.length > 0" class="list-data">
+        <ion-item *ngFor="let i of liveMetrics" class="ion-no-padding">
+          <ion-label>
+            <h2>{{i.description}}</h2>
+            <strong style="display: block;margin-bottom: 5px">
+              <ion-note slot="end" color="primary" *ngIf="i.name !=='location'">{{i.value }} {{i.unit}}</ion-note>
+              <ion-note slot="end" color="primary" *ngIf="i.name =='location'">
+                lat: {{i.value.latitude }} | long: {{i.value.longitude }}
+              </ion-note>
+            </strong>
+            <ion-text style="display:block;" [color]="i.isSend == 0 ? 'danger' : 'success'">
+              {{i.isSend == 0 ? 'Не отправлено' : 'Синхронизировано'}}
+            </ion-text>
+            <p class="ion-padding-top">{{i.ts}}</p>
+          </ion-label>
+        </ion-item>
+      </div>
+      <ion-text *ngIf="!isLoading && liveMetrics.length == 0" color="medium" class="list-data-empty">
+        -- данных нет --
+      </ion-text>
+    </div>
     <ion-fab *ngIf="needSync" vertical="bottom" slot="fixed" class="edit-fixed-bt">
       <ion-button color="success" [disabled]="statusTask"
                   expand="block" (click)="synchronization()">

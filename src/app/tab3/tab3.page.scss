@@ -8,3 +8,22 @@
 .list-bottom-padding{
   display: block;
 }
+
+.data-content{
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 15px;
+}
+
+.list-data{
+  padding-bottom: 40px;
+
+  &-empty{
+    display: block;
+    text-align: center;
+  }
+
+}
+
+

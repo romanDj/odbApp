@@ -96,6 +96,9 @@ export class BackgroundTaskService {
   lastRPMmetricTimestamp;
   liveMetrics = {};
 
+  private liveData$: BehaviorSubject<object> = new BehaviorSubject<object>({});
+  liveData = this.liveData$.asObservable();
+
   odbMetrics = [];
   configOdb;
   uploadingData = false;
@@ -214,6 +217,7 @@ export class BackgroundTaskService {
 
   enable(): void {
     this.liveMetrics = {};
+    this.liveData$.next({});
     this.backgroundMode.enable();
   }
 
@@ -572,6 +576,9 @@ export class BackgroundTaskService {
           })
         ));
     }
+  }
+
+  liveDataSetValue(name: string, value: any){
   }
 
   btEventEmitObs(event, text?): Observable<any> {
