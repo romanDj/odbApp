@@ -69,11 +69,6 @@ const gpsConfig: BackgroundGeolocationConfig = {
 };
 
 
-/**
- * Выполнятся каждые 20 секунд
- * При подключении к OBD собирайте метрики в режиме реального времени
- */
-
 @Injectable({
   providedIn: 'root'
 })
